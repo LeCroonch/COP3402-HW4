@@ -44,7 +44,7 @@ extern code_seq gen_code_block(block_t blk);
 // Generate code for the const-decls, cds
 // There are 3 instructions generated for each identifier declared
 // (one to allocate space and two to initialize that space)
-extern code_seq gen_code_const_decls(const_decls_t cds) {
+extern code_seq gen_code_const_decls(const_decls_t cds) { //Should be good
 
     code_seq ret = code_seq_empty();
     const_decl_t *cdp = cds.const_decls;
@@ -66,7 +66,7 @@ extern code_seq gen_code_const_decl(const_decl_t cd) {
 }
 
 // Generate code for the const-defs, cdfs
-extern code_seq gen_code_const_defs(const_defs_t cdfs) {
+extern code_seq gen_code_const_defs(const_defs_t cdfs) { //Should be good
 
     code_seq ret = code_seq_empty();
     const_def_t *cdfp = cdfs.const_defs;
@@ -89,7 +89,7 @@ extern code_seq gen_code_const_def(const_def_t cdf) {
 // Generate code for the var_decls_t vds to out
 // There are 2 instructions generated for each identifier declared
 // (one to allocate space and another to initialize that space)
-extern code_seq gen_code_var_decls(var_decls_t vds){
+extern code_seq gen_code_var_decls(var_decls_t vds){ //Should be good
 
     code_seq ret = code_seq_empty();
     var_decl_t *vdp = vds.var_decls;
@@ -156,24 +156,33 @@ extern code_seq gen_code_proc_decls(proc_decls_t pds);
 extern code_seq gen_code_proc_decl(proc_decl_t pd);
 
 // Generate code for stmt
-extern code_seq gen_code_stmt(stmt_t stmt){
+extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
 
     switch (stmt.stmt_kind) {
     case assign_stmt:
 	return gen_code_assign_stmt(stmt.data.assign_stmt);
 	break;
+    case call_stmt:
+    return gen_code_call_stmt(stmt.data.call_stmt);
+    break;
     case begin_stmt:
 	return gen_code_begin_stmt(stmt.data.begin_stmt);
 	break;
     case if_stmt:
 	return gen_code_if_stmt(stmt.data.if_stmt);
 	break;
+    case while_stmt:
+    return gen_code_while_stmt(stmt.data.while_stmt);
+    break;
     case read_stmt:
 	return gen_code_read_stmt(stmt.data.read_stmt);
 	break;
     case write_stmt:
 	return gen_code_write_stmt(stmt.data.write_stmt);
 	break;
+    case skip_stmt:
+    return gen_code_skip_stmt(stmt.data.skip_stmt);
+    break;
     default:
 	bail_with_error("Call to gen_code_stmt with an AST that is not a statement!");
 	break;
