@@ -1,4 +1,4 @@
-/* $Id: code.c,v 1.21 2023/11/18 12:28:08 leavens Exp leavens $ */
+/* $Id: code.c,v 1.23 2023/11/28 03:48:42 leavens Exp $ */
 #include <stdlib.h>
 #include <limits.h>
 #include <assert.h>
@@ -460,7 +460,7 @@ code_seq code_seq_concat(code_seq s1, code_seq s2)
 // from (i.e., lower than) the address contained in register rb,
 // and place it in register rt.
 // Modifies only register rt.
-code_seq code_load_static_link(reg_num_type rt, reg_num_type rb)
+code_seq code_load_static_link(reg_num_type rb, reg_num_type rt)
 {
     code_seq ret = code_seq_singleton(code_lw(rb, rt, STATIC_LINK_OFFSET));
     return ret;
@@ -483,7 +483,8 @@ code_seq code_compute_fp(reg_num_type reg, unsigned int levelsOut)
     return ret;
 }
 
-// Put the top of the runtime stack into register reg
+// Allocate space on the runtime stack and copy the contents of register reg
+// into the newly allocated space on top of the stack.
 // Modifies SP and memory.words[SP-BYTES_PER_WORD] when executed
 code_seq code_push_reg_on_stack(reg_num_type reg)
 {
@@ -492,7 +493,9 @@ code_seq code_push_reg_on_stack(reg_num_type reg)
     return ret;
 }
 
-// Put the top of the runtime stack into register reg
+
+// Copy the value from the top of the runtime stack into register reg
+// and then deallocate the top of the stack.
 // Modifies SP and GPR.words[reg] when executed
 code_seq code_pop_stack_into_reg(reg_num_type reg)
 {
@@ -575,9 +578,9 @@ code_seq code_restore_registers_from_AR()
 	ret = code_seq_add_to_end(ret, code_lw(FP, rn, idx--));
     }
     // deallocate the space on the stack, by restoring the SP
-    code_seq_add_to_end(ret, code_lw(FP, SP, -1));
+    ret = code_seq_add_to_end(ret, code_lw(FP, SP, -1));
     // restore the old FP
-    code_seq_add_to_end(ret, code_lw(FP, FP, -2));
+    ret = code_seq_add_to_end(ret, code_lw(FP, FP, -2));
     // the old static link is not restored
     return ret;
 }

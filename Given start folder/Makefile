@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.50 2023/11/17 21:56:45 leavens Exp leavens $
+# $Id: Makefile,v 1.51 2023/11/28 11:50:16 leavens Exp leavens $
 # Makefile for PL/0 compiler and code generation in COP 3402
 
 # Add .exe to the end of target to get that suffix in the rules
@@ -91,6 +91,7 @@ clean:
 	$(RM) $(COMPILER).exe $(COMPILER)
 	$(RM) *.stackdump core
 	$(RM) $(SUBMISSIONZIPFILE)
+	cd $(VM); make clean
 
 cleanall: clean
 	$(RM) *.myo *.myto *.bof *.asm *.tout
@@ -100,6 +101,7 @@ cleanall: clean
 # The use of cat char-inputs.txt | allows read statments to not hang
 .PRECIOUS: %.myo
 %.myo: %.bof $(VM)
+	$(RM) $@; umask 022; \
 	cat char-inputs.txt | ./$(RUNVM) $< > $@ 2>&1
 
 # The .myto files are outputs from running compiled programs
@@ -107,21 +109,25 @@ cleanall: clean
 # The use of cat char-inputs.txt | allows read statments to not hang
 .PRECIOUS: %.myto
 %.myto: %.bof $(VM)
+	$(RM) $@; umask 022; \
 	cat char-inputs.txt | $(RUNVM) -t $< > $@ 2>&1
 
 # The .bof files are the compiled binary object files.
 .PRECIOUS: %.bof
 %.bof: %.$(SUF) $(COMPILER)
+	$(RM) $@; umask 022; \
 	./$(COMPILER) $<
 
 # The .asm files are disassembled binary object files.
 # These are useful for debugging the code the compiler creates.
 %.asm: %.bof $(DISASM)
+	$(RM) $@; umask 022; \
 	$(DISASM) $< > $@ 2>&1
 
 # The .upo files are unparsed programs;
 # these are useful for debugging the parser and understanding the parse.
 %.upo: %.$(SUF) $(COMPILER)
+	$(RM) $@; umask 022; \
 	./$(UNPARSER) $< > $@ 2>&1
 
 # main target for testing
@@ -148,6 +154,8 @@ check-outputs: $(COMPILER) $(VM)
 $(SUBMISSIONZIPFILE): *.c *.h $(STUDENTTESTOUTPUTS)
 	$(ZIP) $(SUBMISSIONZIPFILE) $(PL0).y $(PL0)_lexer.l *.c *.h Makefile
 	$(ZIP) $(SUBMISSIONZIPFILE) $(STUDENTTESTOUTPUTS) $(ALLTESTS) $(EXPECTEDOUTPUTS)
+	$(ZIP) -r -9 $(SUBMISSIONZIPFILE) $(VM) -x  'vm/*.o' 'vm/*.exe' 'vm/RCS/' 'vm/RCS/*,v'
+
 
 # developer's section below...
 
@@ -156,6 +164,13 @@ $(SUBMISSIONZIPFILE): *.c *.h $(STUDENTTESTOUTPUTS)
 # The use of cat char-inputs.txt | allows read statments to not hang
 .PRECIOUS: %.out
 %.out: %.bof $(RUNVM)
+	@if test '$(IMTHEINSTRUCTOR)' != true ; \
+	then \
+		echo 'Students should make the .myo target, not the .out target' ; \
+		echo 'as making the .out files will invalidate the tests' ; \
+		exit 1; \
+	fi
+	$(RM) $@; umask 022
 	cat char-inputs.txt | $(RUNVM) $< >$@ 2>&1
 
 %.tout: %.bof $(RUNVM)
