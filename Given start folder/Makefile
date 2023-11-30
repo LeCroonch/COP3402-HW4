@@ -85,16 +85,24 @@ $(COMPILER): $(COMPILER_OBJECTS)
 
 .PHONY: clean
 clean:
-	$(RM) *~ *.o '#'*
-	$(RM) $(PL0)_lexer.c $(PL0)_lexer.h
-	$(RM) $(PL0).tab.c $(PL0).tab.h $(PL0).output
-	$(RM) $(COMPILER).exe $(COMPILER)
-	$(RM) *.stackdump core
-	$(RM) $(SUBMISSIONZIPFILE)
-	cd $(VM); make clean
+	@if [ -d "$(VM)" ]; then \
+		$(RM) *~ *.o '#'*; \
+		$(RM) $(PL0)_lexer.c $(PL0)_lexer.h; \
+		$(RM) $(PL0).tab.c $(PL0).tab.h $(PL0).output; \
+		$(RM) $(COMPILER).exe $(COMPILER); \
+		$(RM) *.stackdump core; \
+		$(RM) $(SUBMISSIONZIPFILE); \
+		cd $(VM); make clean; \
+	else \
+		echo "Directory $(VM) does not exist."; \
+	fi
 
 cleanall: clean
-	$(RM) *.myo *.myto *.bof *.asm *.tout
+	@if [ -d "$(VM)" ]; then \
+		$(RM) *.myo *.myto *.bof *.asm *.tout; \
+	else \
+		echo "Directory $(VM) does not exist."; \
+	fi
 
 # The .myo files are outputs of VM when run on compiled programs
 # with no tracing in the VM (a high level output of the tests)
