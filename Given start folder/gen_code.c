@@ -5,6 +5,8 @@
 #include "bof.h"
 #include "instruction.h"
 #include "code.h"
+#include "regname.h"
+
 
 // Initialize the code generator
 extern void gen_code_initialize(){
@@ -14,25 +16,38 @@ extern void gen_code_initialize(){
 
 // Requires: bf if open for writing in binary
 // Generate code for prog into bf
-extern void gen_code_program(BOFFILE bf, block_t prog){
+extern void gen_code_program(BOFFILE bf, block_t prog){ //Should be good
     code_seq main_cs;
     // We want to make the main program's AR look like all blocks... so:
     // allocate space and initialize any variables
     main_cs = gen_code_var_decls(prog.var_decls);
-    int vars_len_in_bytes
-	= (code_seq_size(main_cs) / 2) * BYTES_PER_WORD;
+    int vars_len_in_bytes = (code_seq_size(main_cs) / 2) * BYTES_PER_WORD;
+
+    main_cs = gen_code_const_decls(prog.const_decls);
+    int const_len_in_bytes = (code_seq_size(main_cs) / 2) * BYTES_PER_WORD;
+
+    main_cs = gen_code_proc_decls(prog.proc_decls);
+    int proc_len_in_bytes = (code_seq_size(main_cs) / 2) * BYTES_PER_WORD;
     // there is no static link for the program as a whole,
     // so nothing to do for saving FP into A0 as would be done for a block
     main_cs = code_seq_concat(main_cs, code_save_registers_for_AR());
-    main_cs
-	= code_seq_concat(main_cs,
-			  gen_code_stmt(prog.stmt));
-    main_cs = code_seq_concat(main_cs,
-			      code_restore_registers_from_AR());
-    main_cs = code_seq_concat(main_cs,
-			      code_deallocate_stack_space(vars_len_in_bytes));
-    main_cs
-	= code_seq_add_to_end(main_cs, code_exit());
+    main_cs = code_seq_concat(main_cs, gen_code_var_decls(prog.var_decls));
+    main_cs = code_seq_concat(main_cs, code_restore_registers_from_AR());
+    main_cs = code_seq_concat(main_cs, code_deallocate_stack_space(vars_len_in_bytes));
+    main_cs	= code_seq_add_to_end(main_cs, code_exit());
+
+    main_cs = code_seq_concat(main_cs, code_save_registers_for_AR());
+    main_cs = code_seq_concat(main_cs, gen_code_const_decls(prog.const_decls));
+    main_cs = code_seq_concat(main_cs, code_restore_registers_from_AR());
+    main_cs = code_seq_concat(main_cs, code_deallocate_stack_space(const_len_in_bytes));
+    main_cs	= code_seq_add_to_end(main_cs, code_exit());
+
+    main_cs = code_seq_concat(main_cs, code_save_registers_for_AR());
+    main_cs = code_seq_concat(main_cs, gen_code_proc_decls(prog.proc_decls));
+    main_cs = code_seq_concat(main_cs, code_restore_registers_from_AR());
+    main_cs = code_seq_concat(main_cs, code_deallocate_stack_space(proc_len_in_bytes));
+    main_cs	= code_seq_add_to_end(main_cs, code_exit());
+
     gen_code_output_program(bf, main_cs);
 
 }
@@ -41,7 +56,10 @@ extern void gen_code_program(BOFFILE bf, block_t prog){
 // Generate code for the given AST
 extern code_seq gen_code_block(block_t blk) {
 
-      
+    code_seq block;
+    block = gen_code_block(blk);
+    int blen = (code_seq_size(block));
+    
 
 }
 
@@ -305,6 +323,7 @@ extern code_seq gen_code_if_stmt(if_stmt_t stmt) {
 extern code_seq gen_code_while_stmt(while_stmt_t stmt) {
 
     code_seq ret = gen_code_condition(stmt.condition);
+    int wcond_len = code_seq_size(ret);
     ret = code_seq_concat(ret, code_pop_stack_into_reg(V0, bool_te));
     code_seq wbody = gen_code_stmt(*(stmt.body));
     int wbody_len = code_seq_size(wbody);
@@ -338,7 +357,7 @@ extern code_seq gen_code_write_stmt(write_stmt_t stmt) {
     // put the result into $a0 to get ready for PCH
     code_seq ret
 	= gen_code_expr(stmt.expr);
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(A0, float_te));
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
     ret = code_seq_add_to_end(ret, code_pflt());
     return ret;
 
@@ -347,6 +366,8 @@ extern code_seq gen_code_write_stmt(write_stmt_t stmt) {
 // Generate code for the skip statment, stmt
 extern code_seq gen_code_skip_stmt(skip_stmt_t stmt){
 
+    code_seq ret = gen_code_skip_stmt(stmt);
+    ret = code_seq_add_to_end(ret, code_pflt());
 
 }
 
@@ -358,6 +379,14 @@ extern code_seq gen_code_skip_stmt(skip_stmt_t stmt){
 extern code_seq gen_code_condition(condition_t cond){
 
 
+    if(reg != T9){
+        
+        code_seq ret = gen_code_condition(cond);
+
+
+    }
+
+
 }
 
 // Generate code for cond, putting its truth value
@@ -366,6 +395,8 @@ extern code_seq gen_code_condition(condition_t cond){
 // Modifies SP, HI,LO when executed
 extern code_seq gen_code_odd_condition(odd_condition_t cond){
 
+    code_seq ret = gen_code_odd_condition(cond);
+    
 
 
 }
@@ -375,6 +406,9 @@ extern code_seq gen_code_odd_condition(odd_condition_t cond){
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
 extern code_seq gen_code_rel_op_condition(rel_op_condition_t cond){
+
+    code_seq ret = gen_code_rel_op_condition(cond);
+    ret = code_pop_stack_into_reg(AT);
 
 
 }
@@ -500,10 +534,10 @@ extern code_seq gen_code_binary_op_expr(binary_op_expr_t exp) {
     code_seq ret = gen_code_expr(*(exp.expr1));
     ret = code_seq_concat(ret, gen_code_expr(*(exp.expr2)));
     // check the types match
-    type_exp_e t1 = ast_expr_type(*(exp.expr1));
+    int t1 = ast_expr_type(*(exp.expr1)); 
     assert(ast_expr_type(*(exp.expr2)) == t1);
     // do the operation, putting the result on the stack
-    ret = code_seq_concat(ret, gen_code_op(exp.op, t1));
+    ret = code_seq_concat(ret, gen_code_op(exp.arith_op, t1));
     return ret;
 
 }
@@ -569,10 +603,8 @@ extern code_seq gen_code_ident(ident_t id) {
 // Generate code to put the given number on top of the stack
 extern code_seq gen_code_number(number_t num) {
 
-    unsigned int global_offset
-	= literal_table_lookup(num.text, num.value);
-    return code_seq_concat(code_seq_singleton(code_flw(GP, V0, global_offset)),
-			   code_push_reg_on_stack(V0, float_te));
+    unsigned int global_offset = literal_table_lookup(num.text, num.value);
+    return code_seq_concat(code_seq_singleton(code_flw(GP, V0, global_offset)), code_push_reg_on_stack(V0, float_te));
 
 }
 
