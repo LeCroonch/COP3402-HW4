@@ -6,6 +6,8 @@
 #include "instruction.h"
 #include "code.h"
 #include "regname.h"
+#include "literal_table.h"
+#include "literal_table.c"
 
 
 // Initialize the code generator
