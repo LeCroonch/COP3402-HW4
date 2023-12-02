@@ -1,5 +1,3 @@
-#ifndef _GEN_CODE_H
-#define _GEN_CODE_H
 #include <stdio.h>
 #include "ast.h"
 #include "bof.h"
@@ -8,7 +6,7 @@
 #include "regname.h"
 #include "id_use.h"
 #include "literal_table.h"
-#include "literal_table.c"
+#include "gen_code.h"
 
 
 // Initialize the code generator
