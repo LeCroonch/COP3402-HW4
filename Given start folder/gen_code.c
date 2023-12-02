@@ -489,7 +489,7 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
     ret = code_seq_add_to_end(ret, code_add(0, 0, AT)); // put false in AT
     ret = code_seq_add_to_end(ret, code_beq(0, 0, 1)); // skip next instr
     ret = code_seq_add_to_end(ret, code_addi(0, AT, 1)); // put true in AT
-    ret = code_seq_concat(ret, code_push_reg_on_stack(AT, bool_te));
+    ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
     return ret;
     
 }
@@ -498,10 +498,10 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
 // putting the result on top of the stack,
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
-extern code_seq gen_code_expr(expr_t exp) {
+extern code_seq gen_code_expr(expr_t exp) { //Should be good
 
-    switch (exp.expr_kind) {
-    case expr_bin_op:
+    switch (exp.expr_kind) { 
+    case expr_bin:
 	return gen_code_binary_op_expr(exp.data.binary);
 	break;
     case expr_ident:
@@ -509,9 +509,6 @@ extern code_seq gen_code_expr(expr_t exp) {
 	break;
     case expr_number:
 	return gen_code_number(exp.data.number);
-	break;
-    case expr_logical_not:
-	return gen_code_logical_not_expr(*(exp.data.logical_not));
 	break;
     default:
 	bail_with_error("Unexpected expr_kind_e (%d) in gen_code_expr",
@@ -550,12 +547,12 @@ extern code_seq gen_code_binary_op_expr(binary_op_expr_t exp) {
 extern code_seq gen_code_arith_op(token_t arith_op) {
 
     // load top of the stack (the second operand) into AT
-    code_seq ret = code_pop_stack_into_reg(AT, float_te);
+    code_seq ret = code_pop_stack_into_reg(AT);
     // load next element of the stack into V0
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0, float_te));
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
 
     code_seq do_op = code_seq_empty();
-    switch (arith_op.code) {
+    switch (arith_op.code) { 
     case plussym:
 	do_op = code_seq_add_to_end(do_op, code_fadd(V0, AT, V0));
 	break;
@@ -573,7 +570,7 @@ extern code_seq gen_code_arith_op(token_t arith_op) {
 			arith_op.code);
 	break;
     }
-    do_op = code_seq_concat(do_op, code_push_reg_on_stack(V0, float_te));
+    do_op = code_seq_concat(do_op, code_push_reg_on_stack(V0));
     return code_seq_concat(ret, do_op);
 
 }
@@ -596,7 +593,7 @@ extern code_seq gen_code_ident(ident_t id) {
 	ret = code_seq_add_to_end(ret,
 				  code_lw(T9, V0, offset_count));
     }
-    return code_seq_concat(ret, code_push_reg_on_stack(V0, typ));
+    return code_seq_concat(ret, code_push_reg_on_stack(V0));
 
 }
 
@@ -604,7 +601,7 @@ extern code_seq gen_code_ident(ident_t id) {
 extern code_seq gen_code_number(number_t num) {
 
     unsigned int global_offset = literal_table_lookup(num.text, num.value);
-    return code_seq_concat(code_seq_singleton(code_flw(GP, V0, global_offset)), code_push_reg_on_stack(V0, float_te));
+    return code_seq_concat(code_seq_singleton(code_flw(GP, V0, global_offset)), code_push_reg_on_stack(V0));
 
 }
 
