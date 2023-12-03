@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <assert.h>
 #include "pl0.tab.h"
+#include "utilities.h"
 #include "ast.h"
 #include "bof.h"
 #include "instruction.h"
@@ -284,7 +285,7 @@ extern code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
 // EXTRA CREDIT
 
 // Generate code for stmt
-extern code_seq gen_code_call_stmt(call_stmt_t stmt) {
+/*extern code_seq gen_code_call_stmt(call_stmt_t stmt) {
 
     // code_seq ret = gen_code_call_stmt(stmt);
     
@@ -292,7 +293,7 @@ extern code_seq gen_code_call_stmt(call_stmt_t stmt) {
     // ret = code_seq_add_to_end(ret, code_pflt());
     // return ret;
 
-}
+}*/
 
 // END EXTRA CREDIT
 
