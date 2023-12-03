@@ -23,38 +23,29 @@ extern void gen_code_initialize(){
 // Requires: bf if open for writing in binary
 // Generate code for prog into bf
 extern void gen_code_program(BOFFILE bf, block_t prog) { 
-    // Initialize the code generator
     gen_code_initialize();
     
-    // Generate code for the program's block
     code_seq main_cs = gen_code_block(prog);
     
-    // Calculate the size of the text section in bytes
     int text_length_bytes = code_seq_size(main_cs) * BYTES_PER_WORD;
     
-    // Create and populate the BOFHeader
     BOFHeader header;
     strncpy(header.magic, "BOF", MAGIC_BUFFER_SIZE);
     header.text_start_address = 0;
     header.text_length = text_length_bytes;
-    header.data_start_address = header.text_length; // This should be the end of the text section
-    header.data_length = 0; // Assuming no data section for now
+    header.data_start_address = MAX(header.text_length, 1024) + BYTES_PER_WORD;
+    header.data_length = 0;
+
+    header.stack_bottom_addr = header.data_start_address + header.data_length + header.text_length + 4096;
+
     
-    // The stack_bottom_addr should be set to an address after the data section
-    // If there's no data section, it can be the same as data_start_address
-    header.stack_bottom_addr = header.data_start_address + header.data_length;
-    
-    // Write the header to the binary file
     bof_write_header(bf, header);
     
-    // Write the code sequence to the binary file
     code *current_code = main_cs;
     while (current_code != NULL) {
         instruction_write_bin_instr(bf, current_code->instr);
         current_code = current_code->next;
     }
-    
-    // Close the binary file
     bof_close(bf);
 }
 // Requires: bf if open for writing in binary
