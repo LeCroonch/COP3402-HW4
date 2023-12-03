@@ -1,2 +1,0 @@
-# $Id: vmtest0.flt,v 1.4 2023/11/28 22:29:26 leavens Exp leavens $
-write 3.402;  # writes 3.402000

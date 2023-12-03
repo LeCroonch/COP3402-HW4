@@ -1,6 +1,0 @@
-# $Id: vmtest4.flt,v 1.2 2023/11/28 22:12:58 leavens Exp $
-{
-  if (3.13 < 3.14)
-    write 0;  # writes 0.000000
-  write 1;    # writes 1.000000
-}

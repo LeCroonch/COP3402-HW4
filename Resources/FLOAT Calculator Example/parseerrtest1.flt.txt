@@ -1,3 +1,0 @@
-# $Id: parseerrtest1.flt,v 1.2 2023/03/30 00:48:22 leavens Exp $
-float pi;
-pi = 3.14159   # syntax error: missing semicolon at end of assignment

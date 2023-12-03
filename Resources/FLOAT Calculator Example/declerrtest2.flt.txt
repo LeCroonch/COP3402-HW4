@@ -1,2 +1,0 @@
-# $Id: declerrtest2.flt,v 1.2 2023/03/30 00:40:11 leavens Exp $
-write x;  # error: x is not declared!

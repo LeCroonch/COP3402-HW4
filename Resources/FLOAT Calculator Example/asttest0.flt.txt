@@ -1,6 +1,0 @@
-# $Id: asttest0.flt,v 1.1 2023/02/21 23:16:09 leavens Exp $
-float pi;
-{
-    pi = 3.14159;
-    write pi;
-}

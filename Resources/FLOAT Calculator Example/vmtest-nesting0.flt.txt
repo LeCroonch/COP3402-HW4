@@ -1,7 +1,0 @@
-# $Id: vmtest-nesting0.flt,v 1.2 2023/11/28 22:29:26 leavens Exp leavens $
-bool b, c;
-float x, y, nl;
-{
-   write y;    # writes 0.000000
-   write nl;   # writes 0.000000
-}

@@ -1,8 +1,0 @@
-# $Id: vmtest1.flt,v 1.4 2023/11/28 22:29:26 leavens Exp leavens $
-float y;
-float x;
-{
-  x = 3.14159;
-  y = x;
-  write y;    # writes 3.141590
-}
