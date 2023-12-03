@@ -21,18 +21,6 @@ extern void gen_code_initialize(){
 
 // Requires: bf if open for writing in binary
 // Generate code for prog into bf
-#include "gen_code.h"
-#include "bof.h"
-#include "code.h"
-
-// Requires: bf if open for writing in binary
-// Generate code for prog into bf
-#include "gen_code.h"
-#include "bof.h"
-#include "code.h"
-
-// Requires: bf if open for writing in binary
-// Generate code for prog into bf
 extern void gen_code_program(BOFFILE bf, block_t prog) { 
     // Initialize the code generator
     gen_code_initialize();
