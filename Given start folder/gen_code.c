@@ -40,14 +40,20 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
     // Generate code for the program's block
     code_seq main_cs = gen_code_block(prog);
     
+    // Calculate the size of the text section in bytes
+    int text_length_bytes = code_seq_size(main_cs) * BYTES_PER_WORD;
+    
     // Create and populate the BOFHeader
     BOFHeader header;
-    strncpy(header.magic, "BOF", MAGIC_BUFFER_SIZE); // Assuming "BOF" is the magic number for the file format
-    header.text_start_address = 0; // Starting address for the text section
-    header.text_length = code_seq_size(main_cs) * BYTES_PER_WORD; // Size of the text section
-    header.data_start_address = header.text_length; // Starting address for the data section
-    header.data_length = 0; // Size of the data section, assuming no data section for now
-    header.stack_bottom_addr = 0; // Starting address for the stack, assuming no stack for now
+    strncpy(header.magic, "BOF", MAGIC_BUFFER_SIZE);
+    header.text_start_address = 0;
+    header.text_length = text_length_bytes;
+    header.data_start_address = header.text_length; // This should be the end of the text section
+    header.data_length = 0; // Assuming no data section for now
+    
+    // The stack_bottom_addr should be set to an address after the data section
+    // If there's no data section, it can be the same as data_start_address
+    header.stack_bottom_addr = header.data_start_address + header.data_length;
     
     // Write the header to the binary file
     bof_write_header(bf, header);
@@ -55,15 +61,13 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
     // Write the code sequence to the binary file
     code *current_code = main_cs;
     while (current_code != NULL) {
-        // Use the provided function to write the binary instruction
         instruction_write_bin_instr(bf, current_code->instr);
-        current_code = current_code->next; // Move to the next element
+        current_code = current_code->next;
     }
     
     // Close the binary file
     bof_close(bf);
 }
-
 // Requires: bf if open for writing in binary
 // Generate code for the given AST
 extern code_seq gen_code_block(block_t blk) {
