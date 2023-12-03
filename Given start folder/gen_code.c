@@ -36,8 +36,8 @@ extern code_seq gen_code_block(block_t blk) { //Should be good
     block = gen_code_const_decls(blk.const_decls);
     int const_len_in_bytes = (code_seq_size(block) / 2) * BYTES_PER_WORD;
 
-    block = gen_code_proc_decls(blk.proc_decls);
-    int proc_len_in_bytes = (code_seq_size(block) / 2) * BYTES_PER_WORD;
+    //block = gen_code_proc_decls(blk.proc_decls);
+    //int proc_len_in_bytes = (code_seq_size(block) / 2) * BYTES_PER_WORD;
    
     block = code_seq_concat(block, code_save_registers_for_AR());
     block = code_seq_concat(block, gen_code_var_decls(blk.var_decls));
@@ -51,12 +51,13 @@ extern code_seq gen_code_block(block_t blk) { //Should be good
     block = code_seq_concat(block, code_deallocate_stack_space(const_len_in_bytes));
     block	= code_seq_add_to_end(block, code_exit());
 
+    /*
     block = code_seq_concat(block, code_save_registers_for_AR());
     block = code_seq_concat(block, gen_code_proc_decls(blk.proc_decls));
     block = code_seq_concat(block, code_restore_registers_from_AR());
     block = code_seq_concat(block, code_deallocate_stack_space(proc_len_in_bytes));
     block	= code_seq_add_to_end(block, code_exit());
-
+    */
 }
 
 // Generate code for the const-decls, cds
@@ -255,7 +256,7 @@ extern code_seq gen_code_assign_stmt(assign_stmt_t stmt){
 	break;
     default:
 	bail_with_error("Bad var_type (%d) for ident in assignment stmt!",
-			id_use_get_attrs(stmt.idu)->type);
+			id_use_get_attrs(stmt.idu));
 	break;
     }
     return ret;
@@ -304,23 +305,21 @@ extern code_seq gen_code_stmts(stmts_t stmts) { //Should be good
 }
 
 // Generate code for the if-statment given by stmt
-extern code_seq gen_code_if_stmt(if_stmt_t stmt) { //In progress
+extern code_seq gen_code_if_stmt(if_stmt_t stmt) { //Should be good (if problem change return)
 
     code_seq ret = gen_code_condition(stmt.condition);
     int condlen = code_seq_size(ret);
     ret = code_seq_add_to_end(ret, code_beq(V0, 0, condlen));
 
-    ret = gen_code_stmt
-    
-    code_seq ifelse = gen_code_stmts(stmt.else_stmt);
-    // put truth value of stmt.expr in $v0
-    code_seq ret = gen_code_expr(stmt.expr);
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-    code_seq cbody = gen_code_stmt(*(stmt.body));
-    int cbody_len = code_seq_size(cbody);
-    // skip over body if $v0 contains false
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, cbody_len));
-    return code_seq_concat(ret, cbody);
+    ret = gen_code_stmt(*(stmt.else_stmt));
+    int elselen = code_seq_size(ret);
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, elselen));
+
+    ret = gen_cdoe_stmt(*(stmt.then_stmt));
+    int thenlen = code_seq_size(ret);
+    ret = code_seq_add_to_end(ret, beq(V0, 0, thenlen));
+
+    return code_seq_concat(ret, condlen + elselen + thenlen);
 
 }
 
@@ -425,9 +424,9 @@ extern code_seq gen_code_rel_op_condition(rel_op_condition_t cond){
 extern code_seq gen_code_rel_op(token_t rel_op) {
 
     // load top of the stack (the second operand) into AT
-    code_seq ret = code_pop_stack_into_reg(AT, typ);
+    code_seq ret = code_pop_stack_into_reg(AT);
     // load next element of the stack into V0
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0, typ));
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
 
     // start out by doing the comparison
     // and skipping the next 2 instructions if it's true
@@ -611,4 +610,3 @@ extern code_seq gen_code_number(number_t num) { //Looks fine (double check)
 
 }
 
-#endif
