@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <limits.h>
 #include "ast.h"
 #include "bof.h"
 #include "instruction.h"
