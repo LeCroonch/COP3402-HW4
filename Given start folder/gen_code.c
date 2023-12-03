@@ -135,38 +135,37 @@ extern code_seq gen_code_var_decl(var_decl_t vd){ //Should be good
 // in reverse order (so the first declared are allocated last).
 // There are 2 instructions generated for each identifier declared
 // (one to allocate space and another to initialize that space)
-extern code_seq gen_code_idents(idents_t idents){
-
+extern code_seq gen_code_idents(idents_t idents) {//maybe fixed??
     code_seq ret = code_seq_empty();
     ident_t *idp = idents.idents;
-    
-    id_use_get_attrs(idp->idu)->type;
 
     while (idp != NULL) {
-	code_seq alloc_and_init = code_seq_singleton(code_addi(SP, SP, - BYTES_PER_WORD));
-	switch () {
-	case float_te:
-	    alloc_and_init
-		= code_seq_add_to_end(alloc_and_init,
-				      code_fsw(SP, 0, 0));
-	    break;
-	case bool_te:
-	    alloc_and_init
-		= code_seq_add_to_end(alloc_and_init,
-				      code_sw(SP, 0, 0));
-	    break;
-	default:
-	    bail_with_error("Bad type_exp_e (%d) passed to gen_code_idents!", vt);
-	    break;
-	}
-	// Generate these in revese order,
-	// so addressing works propertly
-	ret = code_seq_concat(alloc_and_init, ret);
-	idp = idp->next;
+        id_attrs *attrs = id_use_get_attrs(idp->idu);
+        
+        code_seq alloc_and_init = code_seq_singleton(code_addi(SP, SP, -BYTES_PER_WORD));
+        
+        // Based on the kind of identifier, generate the appropriate store instruction
+        switch (attrs->kind) {
+            case variable_idk: // Assuming all variables are integers
+                alloc_and_init = code_seq_add_to_end(alloc_and_init, code_sw(SP, 0, 0));
+                break;
+            case constant_idk: // Assuming all constants are integers
+                alloc_and_init = code_seq_add_to_end(alloc_and_init, code_sw(SP, 0, 0));
+                break;
+            case procedure_idk:
+                break;
+            default:
+                bail_with_error("Unknown id_kind (%d) in gen_code_idents!", attrs->kind);
+                break;
+        }
+        
+        // Generate these in reverse order, so addressing works properly
+        ret = code_seq_concat(alloc_and_init, ret);
+        idp = idp->next;
     }
     return ret;
-
 }
+
 
 // EXTRA CREDIT
 
@@ -232,40 +231,40 @@ extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
 }
 
 // Generate code for stmt
-extern code_seq gen_code_assign_stmt(assign_stmt_t stmt){
-
-    // can't call gen_code_ident,
-    // since stmt.name is not an ident_t
-    code_seq ret;
+extern code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
     // put value of expression in $v0
-    ret = gen_code_expr(*(stmt.expr));
+    code_seq ret = gen_code_expr(*(stmt.expr));
     assert(stmt.idu != NULL);
     assert(id_use_get_attrs(stmt.idu) != NULL);
-    type_exp_e typ = id_use_get_attrs(stmt.idu)->type;
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0, typ));
-    // put frame pointer from the lexical address of the name
-    // (using stmt.idu) into $t9
-    ret = code_seq_concat(ret,
-			  code_compute_fp(T9, stmt.idu->levelsOutward));
+
+    // Infer the type based on the kind of identifier
+    id_kind kind = id_use_get_attrs(stmt.idu)->kind;
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
+
+    // put frame pointer from the lexical address of the name (using stmt.idu) into $t9
+    ret = code_seq_concat(ret, code_compute_fp(T9, stmt.idu->levelsOutward));
     unsigned int offset_count = id_use_get_attrs(stmt.idu)->offset_count;
     assert(offset_count <= USHRT_MAX); // it has to fit!
-    switch (id_use_get_attrs(stmt.idu)->type) {
-    case float_te:
-	ret = code_seq_add_to_end(ret,
-				  code_fsw(T9, V0, offset_count));
-	break;
-    case bool_te:
-	ret = code_seq_add_to_end(ret,
-				  code_sw(T9, V0, offset_count));
-	break;
-    default:
-	bail_with_error("Bad var_type (%d) for ident in assignment stmt!",
-			id_use_get_attrs(stmt.idu));
-	break;
+
+    // Based on the kind of identifier, generate the appropriate store instruction
+    switch (kind) {
+        case variable_idk: // Assuming all variables are integers
+            ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
+            break;
+        case constant_idk: // Assuming all constants are integers
+            ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
+            break;
+        case procedure_idk:
+            // Procedures do not typically take up space on the stack in this context
+            // You might want to handle procedures differently or ignore them here
+            break;
+        default:
+            bail_with_error("Unknown id_kind (%d) for ident in assignment stmt!", kind);
+            break;
     }
     return ret;
-
 }
+
 
 // EXTRA CREDIT
 
@@ -430,7 +429,6 @@ extern code_seq gen_code_rel_op_condition(rel_op_condition_t cond){
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
 extern code_seq gen_code_rel_op(token_t rel_op) {
-
     // load top of the stack (the second operand) into AT
     code_seq ret = code_pop_stack_into_reg(AT);
     // load next element of the stack into V0
@@ -440,60 +438,31 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
     // and skipping the next 2 instructions if it's true
     code_seq do_op = code_seq_empty();
     switch (rel_op.code) {
-    case eqsym: 
-	if (typ == float_te) {
-	    do_op = code_seq_singleton(code_bfeq(V0, AT, 2));
-	} else {
-	    do_op = code_seq_singleton(code_beq(V0, AT, 2));
-	}
-	break;
-    case neqsym:
-	if (typ == float_te) {
-	    do_op = code_seq_singleton(code_bfne(V0, AT, 2));
-	} else {
-	    do_op = code_seq_singleton(code_bne(V0, AT, 2));
-	}
-	break;
-    case ltsym:
-	if (typ == float_te) {
-	    do_op = code_seq_singleton(code_fsub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bfltz(V0, 2));
-	} else {
-	    do_op = code_seq_singleton(code_sub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bltz(V0, 2));
-	}
-	break;
-    case leqsym:
-	if (typ == float_te) {
-	    do_op = code_seq_singleton(code_fsub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bflez(V0, 2));
-	} else {
-	    do_op = code_seq_singleton(code_sub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_blez(V0, 2));
-	}
-	break;
-    case gtsym:
-	if (typ == float_te) {
-	    do_op = code_seq_singleton(code_fsub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bfgtz(V0, 2));
-	} else {
-	    do_op = code_seq_singleton(code_sub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bgtz(V0, 2));
-	}
-	break;
-    case geqsym:
-	if (typ == float_te) {
-	    do_op = code_seq_singleton(code_fsub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bfgez(V0, 2));
-	} else {
-	    do_op = code_seq_singleton(code_sub(V0, AT, V0));
-	    do_op = code_seq_add_to_end(do_op, code_bgez(V0, 2));
-	}
-	break;
-    default:
-	bail_with_error("Unknown token code (%d) in gen_code_rel_op",
-			rel_op.code);
-	break;
+        case eqsym:
+            do_op = code_seq_singleton(code_beq(V0, AT, 2));
+            break;
+        case neqsym:
+            do_op = code_seq_singleton(code_bne(V0, AT, 2));
+            break;
+        case ltsym:
+            do_op = code_seq_singleton(code_sub(V0, AT, V0));
+            do_op = code_seq_add_to_end(do_op, code_bltz(V0, 2));
+            break;
+        case leqsym:
+            do_op = code_seq_singleton(code_sub(V0, AT, V0));
+            do_op = code_seq_add_to_end(do_op, code_blez(V0, 2));
+            break;
+        case gtsym:
+            do_op = code_seq_singleton(code_sub(V0, AT, V0));
+            do_op = code_seq_add_to_end(do_op, code_bgtz(V0, 2));
+            break;
+        case geqsym:
+            do_op = code_seq_singleton(code_sub(V0, AT, V0));
+            do_op = code_seq_add_to_end(do_op, code_bgez(V0, 2));
+            break;
+        default:
+            bail_with_error("Unknown token code (%d) in gen_code_rel_op", rel_op.code);
+            break;
     }
     ret = code_seq_concat(ret, do_op);
     // rest of the code for the comparisons
@@ -502,8 +471,8 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
     ret = code_seq_add_to_end(ret, code_addi(0, AT, 1)); // put true in AT
     ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
     return ret;
-    
 }
+
 
 // Generate code for the expression exp
 // putting the result on top of the stack,
