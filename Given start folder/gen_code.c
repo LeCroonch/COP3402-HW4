@@ -115,13 +115,12 @@ extern code_seq gen_code_var_decls(var_decls_t vds){ //Should be good
     code_seq ret = code_seq_empty();
     var_decl_t *vdp = vds.var_decls;
     while (vdp != NULL) {
-	// generate these in reverse order,
-	// so the addressing offsets work properly
-	ret = code_seq_concat(gen_code_var_decl(*vdp), ret);
-	vdp = vdp->next;
+        // generate these in reverse order,
+        // so the addressing offsets work properly
+        ret = code_seq_concat(gen_code_var_decl(*vdp), ret);
+        vdp = vdp->next;
     }
     return ret;
-
 }
 
 // Generate code for a single <var-decl>, vd,
@@ -314,35 +313,40 @@ extern code_seq gen_code_stmts(stmts_t stmts) { //Should be good
 }
 
 // Generate code for the if-statment given by stmt
-extern code_seq gen_code_if_stmt(if_stmt_t stmt) { //Should be good (if problem change return)
+extern code_seq gen_code_if_stmt(if_stmt_t stmt) { //Corrected
 
     code_seq ret = gen_code_condition(stmt.condition);
-    int condlen = code_seq_size(ret);
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, condlen));
+    code_seq then_seq = gen_code_stmt(*(stmt.then_stmt));
+    code_seq else_seq = gen_code_stmt(*(stmt.else_stmt));
 
-    ret = gen_code_stmt(*(stmt.else_stmt));
-    int elselen = code_seq_size(ret);
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, elselen));
+    int then_len = code_seq_size(then_seq);
+    int else_len = code_seq_size(else_seq);
 
-    ret = gen_cdoe_stmt(*(stmt.then_stmt));
-    int thenlen = code_seq_size(ret);
-    ret = code_seq_add_to_end(ret, beq(V0, 0, thenlen));
+    // Branch to else part if condition is false
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, then_len + 1)); // +1 for the jump over the else part
+    ret = code_seq_concat(ret, then_seq);
+    // Jump over the else part if then part is executed
+    ret = code_seq_add_to_end(ret, code_jmp(else_len));
+    ret = code_seq_concat(ret, else_seq);
 
-    return code_seq_concat(ret, condlen + elselen + thenlen);
-
+    return ret;
 }
 
 // Generate code for the if-statment given by stmt
-extern code_seq gen_code_while_stmt(while_stmt_t stmt) {
+extern code_seq gen_code_while_stmt(while_stmt_t stmt) { //Corrected
 
     code_seq ret = gen_code_condition(stmt.condition);
-    int wcond_len = code_seq_size(ret);
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-    code_seq wbody = gen_code_stmt(*(stmt.body));
-    int wbody_len = code_seq_size(wbody);
+    code_seq body_seq = gen_code_stmt(*(stmt.body));
 
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, wbody_len));
-    return code_seq_concat(ret, wbody);
+    int body_len = code_seq_size(body_seq);
+
+    // Branch to the end if condition is false
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, body_len + 1)); // +1 to jump over the loop back
+    ret = code_seq_concat(ret, body_seq);
+    // Loop back to the condition check
+    ret = code_seq_add_to_end(ret, code_jmp(-(body_len + 1 + code_seq_size(ret))));
+
+    return ret;
 }
 
 // Generate code for the read statment given by stmt
@@ -359,7 +363,7 @@ extern code_seq gen_code_read_stmt(read_stmt_t stmt) {
     unsigned int offset_count = id_use_get_attrs(stmt.idu)->offset_count;
     assert(offset_count <= USHRT_MAX); // it has to fit!
     ret = code_seq_add_to_end(ret,
-			      code_seq_singleton(code_fsw(T9, V0, offset_count)));
+			      code_seq_singleton(code_sw(T9, V0, offset_count)));
     return ret;
 
 }
@@ -543,16 +547,16 @@ extern code_seq gen_code_arith_op(token_t arith_op) {
     code_seq do_op = code_seq_empty();
     switch (arith_op.code) {  
     case plussym:
-	do_op = code_seq_add_to_end(do_op, code_fadd(V0, AT, V0));
+	do_op = code_seq_add_to_end(do_op, code_add(V0, AT, V0));
 	break;
     case minussym:
-	do_op = code_seq_add_to_end(do_op, code_fsub(V0, AT, V0));
+	do_op = code_seq_add_to_end(do_op, code_sub(V0, AT, V0));
 	break;
     case multsym:
-	do_op = code_seq_add_to_end(do_op, code_fmul(V0, AT, V0));
+	do_op = code_seq_add_to_end(do_op, code_mul(V0, AT));
 	break;
     case divsym: 
-	do_op = code_seq_add_to_end(do_op, code_fdiv(V0, AT, V0));
+	do_op = code_seq_add_to_end(do_op, code_div(V0, AT));
 	break;
     default:
 	bail_with_error("Unexpected arithOp (%d) in gen_code_arith_op",
@@ -587,7 +591,7 @@ extern code_seq gen_code_ident(ident_t id) {
 extern code_seq gen_code_number(number_t num) { //Looks fine (double check)
 
     unsigned int global_offset = literal_table_lookup(num.text, num.value);
-    return code_seq_concat(code_seq_singleton(code_flw(GP, V0, global_offset)), code_push_reg_on_stack(V0));
+    return code_seq_concat(code_seq_singleton(code_lw(GP, V0, global_offset)), code_push_reg_on_stack(V0));
 
 }
 
