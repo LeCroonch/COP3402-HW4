@@ -449,8 +449,8 @@ extern code_seq gen_code_odd_condition(odd_condition_t cond){
 // May also modify SP, HI,LO when executed
 extern code_seq gen_code_rel_op_condition(rel_op_condition_t cond){
 
-    code_seq ret = gen_code_rel_op_condition(cond);
-    ret = code_pop_stack_into_reg(AT);
+    code_seq ret = gen_code_rel_op(cond.rel_op);
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(AT));
 
     return ret;
 
