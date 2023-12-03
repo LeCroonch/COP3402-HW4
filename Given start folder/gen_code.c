@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <limits.h>
 #include <assert.h>
 #include "pl0.tab.h"
@@ -20,47 +21,68 @@ extern void gen_code_initialize(){
 
 // Requires: bf if open for writing in binary
 // Generate code for prog into bf
-extern void gen_code_program(BOFFILE bf, block_t prog){ 
-    code_seq main_cs;
-    
-    
+#include "gen_code.h"
+#include "bof.h"
+#include "code.h"
 
+// Requires: bf if open for writing in binary
+// Generate code for prog into bf
+#include "gen_code.h"
+#include "bof.h"
+#include "code.h"
+
+// Requires: bf if open for writing in binary
+// Generate code for prog into bf
+extern void gen_code_program(BOFFILE bf, block_t prog) { 
+    // Initialize the code generator
+    gen_code_initialize();
+    
+    // Generate code for the program's block
+    code_seq main_cs = gen_code_block(prog);
+    
+    // Create and populate the BOFHeader
+    BOFHeader header;
+    strncpy(header.magic, "BOF", MAGIC_BUFFER_SIZE); // Assuming "BOF" is the magic number for the file format
+    header.text_start_address = 0; // Starting address for the text section
+    header.text_length = code_seq_size(main_cs) * BYTES_PER_WORD; // Size of the text section
+    header.data_start_address = header.text_length; // Starting address for the data section
+    header.data_length = 0; // Size of the data section, assuming no data section for now
+    header.stack_bottom_addr = 0; // Starting address for the stack, assuming no stack for now
+    
+    // Write the header to the binary file
+    bof_write_header(bf, header);
+    
+    // Write the code sequence to the binary file
+    code *current_code = main_cs;
+    while (current_code != NULL) {
+        // Use the provided function to write the binary instruction
+        instruction_write_bin_instr(bf, current_code->instr);
+        current_code = current_code->next; // Move to the next element
+    }
+    
+    // Close the binary file
+    bof_close(bf);
 }
 
 // Requires: bf if open for writing in binary
 // Generate code for the given AST
-extern code_seq gen_code_block(block_t blk) { //Should be good
+extern code_seq gen_code_block(block_t blk) {
+    code_seq block = code_seq_empty();
 
-    code_seq block;
-    
-    block = gen_code_var_decls(blk.var_decls);
-    int vars_len_in_bytes = (code_seq_size(block) / 2) * BYTES_PER_WORD;
+    code_seq var_block = gen_code_var_decls(blk.var_decls);
+    int vars_len_in_bytes = (code_seq_size(var_block) / 2) * BYTES_PER_WORD;
 
-    block = gen_code_const_decls(blk.const_decls);
-    int const_len_in_bytes = (code_seq_size(block) / 2) * BYTES_PER_WORD;
+    code_seq const_block = gen_code_const_decls(blk.const_decls);
+    int const_len_in_bytes = (code_seq_size(const_block) / 2) * BYTES_PER_WORD;
 
-    //block = gen_code_proc_decls(blk.proc_decls);
-    //int proc_len_in_bytes = (code_seq_size(block) / 2) * BYTES_PER_WORD;
-   
     block = code_seq_concat(block, code_save_registers_for_AR());
-    block = code_seq_concat(block, gen_code_var_decls(blk.var_decls));
+    block = code_seq_concat(block, var_block);
+    block = code_seq_concat(block, const_block);
     block = code_seq_concat(block, code_restore_registers_from_AR());
-    block = code_seq_concat(block, code_deallocate_stack_space(vars_len_in_bytes));
+    block = code_seq_concat(block, code_deallocate_stack_space(vars_len_in_bytes + const_len_in_bytes));
     block = code_seq_add_to_end(block, code_exit());
 
-    block = code_seq_concat(block, code_save_registers_for_AR());
-    block = code_seq_concat(block, gen_code_const_decls(blk.const_decls));
-    block = code_seq_concat(block, code_restore_registers_from_AR());
-    block = code_seq_concat(block, code_deallocate_stack_space(const_len_in_bytes));
-    block	= code_seq_add_to_end(block, code_exit());
-
-    /*
-    block = code_seq_concat(block, code_save_registers_for_AR());
-    block = code_seq_concat(block, gen_code_proc_decls(blk.proc_decls));
-    block = code_seq_concat(block, code_restore_registers_from_AR());
-    block = code_seq_concat(block, code_deallocate_stack_space(proc_len_in_bytes));
-    block	= code_seq_add_to_end(block, code_exit());
-    */
+    return block;
 }
 
 // Generate code for the const-decls, cds
@@ -370,21 +392,24 @@ extern code_seq gen_code_read_stmt(read_stmt_t stmt) {
 
 // Generate code for the write statment given by stmt.
 extern code_seq gen_code_write_stmt(write_stmt_t stmt) {
-
-    // put the result into $a0 to get ready for PCH
-    code_seq ret = gen_code_expr(stmt.expr);    
+    // Generate code to evaluate the expression and put the result on the stack
+    code_seq ret = gen_code_expr(stmt.expr);
+    
+    // Pop the result from the stack into the $a0 register, which is the argument for print syscall
     ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
-    ret = code_seq_add_to_end(ret, code_pflt());
+    
+    // Call the appropriate print syscall based on the type of the expression
+    // Assuming the expression results in an integer, use code_pint() to print it
+    // If the expression is a character, you would use code_pch() instead
+    ret = code_seq_add_to_end(ret, code_pint());
+    
     return ret;
-
 }
 
 // Generate code for the skip statment, stmt
 extern code_seq gen_code_skip_stmt(skip_stmt_t stmt){
-
-    code_seq ret = gen_code_skip_stmt(stmt);
-    ret = code_seq_add_to_end(ret, code_pflt());
-
+    // Assuming skip_stmt is meant to do nothing, we return an empty sequence
+    return code_seq_empty();
 }
 
 // Requires: reg != T9
@@ -419,9 +444,11 @@ extern code_seq gen_code_condition(condition_t cond){
 // and using V0 and AT as temporary registers
 // Modifies SP, HI,LO when executed
 extern code_seq gen_code_odd_condition(odd_condition_t cond){
-
-    code_seq ret = gen_code_odd_condition(cond);
-    
+    code_seq ret = gen_code_expr(cond.expr);
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
+    ret = code_seq_add_to_end(ret, code_andi(V0, V0, 1)); // V0 = V0 & 1 (to check if odd)
+    ret = code_seq_concat(ret, code_push_reg_on_stack(V0));
+    return ret;
 }
 
 // Generate code for cond, putting its truth value
@@ -432,6 +459,8 @@ extern code_seq gen_code_rel_op_condition(rel_op_condition_t cond){
 
     code_seq ret = gen_code_rel_op_condition(cond);
     ret = code_pop_stack_into_reg(AT);
+
+    return ret;
 
 
 }
@@ -518,18 +547,14 @@ extern code_seq gen_code_expr(expr_t exp) { //Should be good
 // putting the result on top of the stack,
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
-extern code_seq gen_code_binary_op_expr(binary_op_expr_t exp) { //No errors so might be good
-
+extern code_seq gen_code_binary_op_expr(binary_op_expr_t exp) {
     // put the values of the two subexpressions on the stack
     code_seq ret = gen_code_expr(*(exp.expr1));
     ret = code_seq_concat(ret, gen_code_expr(*(exp.expr2)));
-    // check the types match
-    int t1 = ast_expr_type(*(exp.expr1)); 
-    assert(ast_expr_type(*(exp.expr2)) == t1);
+    
     // do the operation, putting the result on the stack
-    ret = code_seq_concat(ret, gen_code_op(exp.arith_op, t1));
+    ret = code_seq_concat(ret, gen_code_arith_op(exp.arith_op));
     return ret;
-
 }
 
 // Generate code to apply arith_op to the
