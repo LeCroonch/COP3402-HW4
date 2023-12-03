@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <limits.h>
+#include <assert.h>
+#include "pl0.tab.h"
 #include "ast.h"
 #include "bof.h"
 #include "instruction.h"
@@ -75,7 +77,6 @@ extern code_seq gen_code_const_decls(const_decls_t cds) { //Should be good
 
     }
     return ret;
-
 }
 
 // Generate code for the const-decl, cd
@@ -388,16 +389,25 @@ extern code_seq gen_code_skip_stmt(skip_stmt_t stmt){
 // and using V0 and AT as temporary registers
 // May modify HI,LO when executed
 extern code_seq gen_code_condition(condition_t cond){
+    code_seq ret;
 
-
-    if(reg != T9){
-        
-        code_seq ret = gen_code_condition(cond);
-
-
+    // Depending on the condition kind, call the appropriate function
+    switch (cond.cond_kind) {
+        case ck_odd:
+            // Generate code for odd condition
+            ret = gen_code_odd_condition(cond.data.odd_cond);
+            break;
+        case ck_rel:
+            // Generate code for relational operator condition
+            ret = gen_code_rel_op_condition(cond.data.rel_op_cond);
+            break;
+        default:
+            bail_with_error("Unknown condition kind (%d) in gen_code_condition!", cond.cond_kind);
+            break;
     }
 
-
+    // The result of evaluating the condition should now be on top of the stack
+    return ret;
 }
 
 // Generate code for cond, putting its truth value
@@ -408,8 +418,6 @@ extern code_seq gen_code_odd_condition(odd_condition_t cond){
 
     code_seq ret = gen_code_odd_condition(cond);
     
-
-
 }
 
 // Generate code for cond, putting its truth value
@@ -559,26 +567,21 @@ extern code_seq gen_code_arith_op(token_t arith_op) {
 // Generate code to put the value of the given identifier
 // on top of the stack
 // Modifies T9, V0, and SP when executed
+// Generate code to put the value of the given identifier on top of the stack
+// Modifies T9, V0, and SP when executed
 extern code_seq gen_code_ident(ident_t id) {
-
     assert(id.idu != NULL);
-    code_seq ret = code_compute_fp(T9, id.idu);
+    code_seq ret = code_compute_fp(T9, id.idu->levelsOutward);
     assert(id_use_get_attrs(id.idu) != NULL);
     unsigned int offset_count = id_use_get_attrs(id.idu)->offset_count;
     assert(offset_count <= USHRT_MAX); // it has to fit!
-    
-    id_use *idu = id.idu;
-    id_attrs typ = id_use_get_attrs(idu);
-    if (typ == float_te) {
-	ret = code_seq_add_to_end(ret,
-				  code_flw(T9, V0, offset_count));
-    } else {
-	ret = code_seq_add_to_end(ret,
-				  code_lw(T9, V0, offset_count));
-    }
-    return code_seq_concat(ret, code_push_reg_on_stack(V0));
 
+    ret = code_seq_add_to_end(ret, code_lw(T9, V0, offset_count * BYTES_PER_WORD));
+
+    ret = code_seq_concat(ret, code_push_reg_on_stack(V0));
+    return ret;
 }
+
 
 // Generate code to put the given number on top of the stack
 extern code_seq gen_code_number(number_t num) { //Looks fine (double check)
