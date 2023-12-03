@@ -168,27 +168,31 @@ extern code_seq gen_code_idents(idents_t idents){
 
 }
 
-// (Stub for:) Generate code for the procedure declarations
-extern code_seq gen_code_proc_decls(proc_decls_t pds) { //Should be good
+// EXTRA CREDIT
 
-    code_seq ret = code_seq_empty();
-    proc_decl_t *pdp = pdp->block;
-    while (pdp != NULL) {
-	// generate these in reverse order,
-	// so the addressing offsets work properly
-	ret = code_seq_concat(gen_code_proc_decl(*pdp), ret); 
-	pdp = pdp->next;
-    }
-    return ret;
+// (Stub for:) Generate code for the procedure declarations
+extern void gen_code_proc_decls(proc_decls_t pds) {
+     //code_seq not void before
+    // code_seq ret = code_seq_empty();
+    // proc_decl_t *pdp = pdp->block;
+    // while (pdp != NULL) {
+	// // generate these in reverse order,
+	// // so the addressing offsets work properly
+	// ret = code_seq_concat(gen_code_proc_decl(*pdp), ret); 
+	// pdp = pdp->next;
+    // }
+    // return ret;
 
 }
 
 // (Stub for:) Generate code for a procedure declaration
-extern code_seq gen_code_proc_decl(proc_decl_t pd) { //I think it works (double check)
-
-    return gen_code_block(*(pd.block));
+extern void gen_code_proc_decl(proc_decl_t pd) {
+     //code_seq not void before
+    // return gen_code_block(*(pd.block));
 
 }
+
+// END EXTRA CREDIT
 
 // Generate code for stmt
 extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
@@ -197,9 +201,9 @@ extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
     case assign_stmt:
 	return gen_code_assign_stmt(stmt.data.assign_stmt);
 	break;
-    case call_stmt:
-    return gen_code_call_stmt(stmt.data.call_stmt);
-    break;
+    // case call_stmt:
+    // return gen_code_call_stmt(stmt.data.call_stmt);
+    // break;
     case begin_stmt:
 	return gen_code_begin_stmt(stmt.data.begin_stmt);
 	break;
@@ -263,16 +267,20 @@ extern code_seq gen_code_assign_stmt(assign_stmt_t stmt){
 
 }
 
-// Generate code for stmt
-extern code_seq gen_code_call_stmt(call_stmt_t stmt) { //Should be good
+// EXTRA CREDIT
 
-    code_seq ret = gen_code_call_stmt(stmt);
+// Generate code for stmt
+extern code_seq gen_code_call_stmt(call_stmt_t stmt) {
+
+    // code_seq ret = gen_code_call_stmt(stmt);
     
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
-    ret = code_seq_add_to_end(ret, code_pflt());
-    return ret;
+    // ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
+    // ret = code_seq_add_to_end(ret, code_pflt());
+    // return ret;
 
 }
+
+// END EXTRA CREDIT
 
 // Generate code for stmt
 extern code_seq gen_code_begin_stmt(begin_stmt_t stmt) { //Should be good (double check)
