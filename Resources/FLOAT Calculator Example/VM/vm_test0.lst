@@ -1,0 +1,4 @@
+Addr  Instruction
+   0 STRA 
+   4 ADDI $0, $t0, 1
+   8 EXIT 

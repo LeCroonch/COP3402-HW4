@@ -1,0 +1,13 @@
+# $Id: parseerrtest5.flt,v 1.1 2023/02/22 14:26:19 leavens Exp $
+float pi;
+float f;
+{
+ if (!(pi <= f)) {
+  # syntax error below, condition of an if needs parentheses!
+  if f < pi {
+    write f;
+    write pi;
+  }
+ }
+}
+

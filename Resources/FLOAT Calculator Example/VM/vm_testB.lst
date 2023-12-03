@@ -1,0 +1,70 @@
+Addr  Instruction
+   0 FLW $gp, $t1, 0	# offset is +0 bytes
+   4 FLW $gp, $t9, 3	# offset is +12 bytes
+   8 FDIV $t1, $t9, $t0
+  12 RND $t0, $t2
+  16 FDIV $t0, $t9, $t0
+  20 FDIV $t0, $t9, $t0
+  24 FSUB $t1, $t0, $t2
+  28 RND $t2, $t8
+  32 RND $t1, $t0
+  36 BEQ $t8, $t0, 3	# offset is +12 bytes
+  40 ADDI $0, $a0, 206
+  44 JAL 32	# target is byte address 128
+  48 BEQ $0, $0, 2	# offset is +8 bytes
+  52 ADDI $0, $a0, 206
+  56 JAL 47	# target is byte address 188
+  60 FLW $gp, $t3, 1	# offset is +4 bytes
+  64 RND $t3, $t2
+  68 FMUL $t1, $t3, $t4
+  72 FADD $0, $t4, $t5
+  76 FSUB $t5, $t4, $t6
+  80 FSW $gp, $t4, 5	# offset is +20 bytes
+  84 FLW $gp, $t7, 2	# offset is +8 bytes
+  88 FLW $gp, $t8, 3	# offset is +12 bytes
+  92 FMUL $t7, $t8, $a0
+  96 PFLT 
+ 100 ADDI $0, $a0, 10
+ 104 PCH 
+ 108 FMUL $t7, $t3, $t9
+ 112 RND $t9, $a0
+ 116 PINT 
+ 120 JAL 64	# target is byte address 256
+ 124 EXIT 
+ 128 SW $sp, $sp, -1	# offset is -4 bytes
+ 132 ADDI $sp, $sp, -16
+ 136 SW $sp, $fp, 2	# offset is +8 bytes
+ 140 ADDI $sp, $fp, 16
+ 144 SW $fp, $a0, -3	# offset is -12 bytes
+ 148 SW $fp, $ra, -4	# offset is -16 bytes
+ 152 ADDI $0, $a0, 110
+ 156 PCH 
+ 160 ADDI $a0, $a0, 1
+ 164 PCH 
+ 168 JAL 64	# target is byte address 256
+ 172 LW $fp, $ra, -4	# offset is -16 bytes
+ 176 LW $fp, $fp, -2	# offset is -8 bytes
+ 180 ADDI $sp, $sp, 16
+ 184 JR $ra
+ 188 SW $sp, $sp, -1	# offset is -4 bytes
+ 192 ADDI $sp, $sp, -16
+ 196 SW $sp, $fp, 2	# offset is +8 bytes
+ 200 ADDI $sp, $fp, 16
+ 204 SW $fp, $a0, -3	# offset is -12 bytes
+ 208 SW $fp, $ra, -4	# offset is -16 bytes
+ 212 ADDI $0, $a0, 121
+ 216 PCH 
+ 220 ADDI $0, $a0, 101
+ 224 PCH 
+ 228 ADDI $0, $a0, 115
+ 232 PCH 
+ 236 JAL 64	# target is byte address 256
+ 240 LW $fp, $ra, -4	# offset is -16 bytes
+ 244 LW $fp, $fp, -2	# offset is -8 bytes
+ 248 ADDI $sp, $sp, 16
+ 252 JR $ra
+ 256 ADDI $0, $a0, 10
+ 260 PCH 
+ 264 JR $ra
+    1024: 1.000000	    1028: 3.141593	    1032: 2.718282	    1036: 10.000000	
+    1040: 12.000000	

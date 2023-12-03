@@ -1,0 +1,10 @@
+# $Id: vmtest3.flt,v 1.4 2023/11/28 22:12:58 leavens Exp $
+float x;
+float y;
+{ 
+  if (x <= y)
+    if (x + 0 < y - 20)
+          write y + 10;
+  if (!(x + 0 < y - 20))
+    write 1;             # writes 1.000000
+}

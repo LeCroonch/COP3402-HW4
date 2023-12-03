@@ -1,0 +1,4 @@
+# $Id: declerrtest3.flt,v 1.2 2023/03/30 00:40:11 leavens Exp $
+bool aBoolVar, another, yet_another;
+float aFloatVar, anotherOne, yet_another;  # error: yet_another already declared!
+write aFloatVar;

@@ -1,0 +1,3 @@
+# $Id: readtest0.flt,v 1.1 2023/03/31 12:57:28 leavens Exp $
+float a;
+read a;

@@ -1,0 +1,396 @@
+ /* $Id: asm.y,v 1.46 2023/11/12 20:30:47 leavens Exp $ */
+
+%code top {
+#include <stdio.h>
+}
+
+%code requires {
+#include <assert.h>
+ /* Including "ast.h" must be at the top, to define the AST type */
+#include "ast.h"
+#include "machine_types.h"
+#include "parser_types.h"
+#include "lexer.h"
+
+    /* Report an error to the user on stderr */
+extern void yyerror(const char *filename, const char *msg);
+}    
+
+%verbose
+%define parse.lac full
+%define parse.error detailed
+
+%parse-param { char const *file_name }
+
+%token eolsym
+%token <ident> identsym
+%token <signed_int> signedintsym
+%token <unsigned_int> unsignedintsym
+%token <floatlit> floatlitsym
+%token <token> plussym    "+"
+%token <token> minussym   "-"
+%token commasym           ","
+%token <token> dottextsym ".text"
+%token <token> dotdatasym ".data"
+%token <token> dotstacksym ".stack"
+%token dotendsym          ".end"
+%token colonsym           ":"
+%token <token> equalsym   "="
+%token <token> addopsym   "ADD"
+%token <token> subopsym   "SUB"
+%token <token> andopsym   "AND"
+%token <token> boropsym   "BOR"
+%token <token> noropsym   "NOR"
+%token <token> xoropsym   "XOR"
+%token <token> mulopsym   "MUL"
+%token <token> divopsym   "DIV"
+%token <token> faddopsym  "FADD"
+%token <token> fsubopsym  "FSUB"
+%token <token> fmulopsym  "FMUL"
+%token <token> fdivopsym  "FDIV"
+%token <token> sllopsym   "SLL"
+%token <token> srlopsym   "SRL"
+%token <token> mfhiopsym  "MFHI"
+%token <token> mfloopsym  "MFLO"
+%token <token> cvtopsym   "CVT"
+%token <token> rndopsym   "RND"
+%token <token> jropsym    "JR"
+%token <token> addiopsym  "ADDI"
+%token <token> andiopsym  "ANDI"
+%token <token> boriopsym  "BORI"
+%token <token> xoriopsym  "XORI"
+%token <token> beqopsym   "BEQ"
+%token <token> bgezopsym  "BGEZ"
+%token <token> bgtzopsym  "BGTZ"
+%token <token> blezopsym  "BLEZ"
+%token <token> bltzopsym  "BLTZ"
+%token <token> bneopsym   "BNE"
+%token <token> bfeqopsym  "BFEQ"
+%token <token> bfgezopsym "BFGEZ"
+%token <token> bfgtzopsym "BFGTZ"
+%token <token> bflezopsym "BFLEZ"
+%token <token> bfltzopsym "BFLTZ"
+%token <token> bfneopsym  "BFNE"
+%token <token> lbuopsym   "LBU"
+%token <token> lwopsym    "LW"
+%token <token> flwopsym   "FLW"
+%token <token> sbopsym    "SB"
+%token <token> swopsym    "SW"
+%token <token> fswopsym   "FSW"
+%token <token> jmpopsym   "JMP"
+%token <token> jalopsym   "JAL"
+%token <token> exitopsym  "EXIT"
+%token <token> pstropsym  "PSTR"
+%token <token> pintopsym  "PINT"
+%token <token> pfltopsym  "PFLT"
+%token <token> pchopsym   "PCH"
+%token <token> rchopsym   "RCH"
+%token <token> rfltopsym  "RFLT"
+%token <token> straopsym  "STRA"
+%token <token> notropsym  "NOTR"
+
+%token <reg> regsym
+
+%token <token> floatsym  "FLOAT"
+%token <token> intsym    "INT"
+
+%type <program> program
+%type <text_section> textSection
+%type <lora> entryPoint
+%type <asm_instrs> asmInstrs
+%type <lora> lora
+%type <empty> empty
+%type <ident> label
+%type <label_opt> labelOpt
+%type <instr> instr
+%type <asm_instr> asmInstr
+%type <instr> threeRegInstr
+%type <instr> twoRegInstr
+%type <instr> shiftInstr
+%type <instr> oneRegInstr
+%type <instr> immedArithInstr
+%type <instr> immedBoolInstr
+%type <instr> branchTestInstr
+%type <instr> loadStoreInstr
+%type <instr> jumpInstr
+%type <instr> syscallInstr
+%type <token> threeRegOp
+%type <token> twoRegOp
+%type <token> fpcOp
+%type <instr> fpcInstr
+%type <token> shiftOp
+%type <unsigned_int> shift
+%type <token> moveHiLoOp
+%type <token> jrOp
+%type <token> immedArithOp
+%type <signed_int> immed
+%type <token> immedBoolOp
+%type <token> branchTest2Op
+%type <token> branchTest1Op
+%type <signed_int> offset
+%type <token> loadStoreOp
+%type <token> jumpOp
+%type <token> syscallOp
+%type <data_section> dataSection
+%type <unsigned_int> staticStartAddr
+%type <static_int_decls> staticIntDecls
+%type <static_float_decls> staticFloatDecls
+%type <static_int_decl> staticIntDecl
+%type <static_float_decl> staticFloatDecl
+%type <int_initializer> intInitializerOpt
+%type <float_initializer> floatInitializerOpt
+%type <stack_section> stackSection
+%type <unsigned_int> stackBottomAddr
+
+%start program
+
+%code {
+ /* extern declarations provided by the lexer */
+extern int yylex(void);
+
+ /* extern void yyerror(char const *msg); */
+
+ /* The AST for the program, set by the semantic action for program. */
+program_t progast; 
+
+ /* Set the program's ast to be t */
+extern void setProgAST(program_t t);
+}
+
+%%
+
+program : textSection dataSection stackSection ".end"
+          { setProgAST(
+                       ast_program($1,
+                                   $2,
+				   $3
+                                  )
+                       );
+          }
+          ;
+
+textSection : ".text" entryPoint asmInstrs 
+            { $$ = ast_text_section($1,$2,$3); }
+          ;
+
+entryPoint : lora ;
+
+lora : label { $$ = ast_lora_label($1); }
+     | unsignedintsym { $$ = ast_lora_addr($1); }
+     ;
+
+asmInstrs : asmInstr { $$ = ast_asm_instrs_singleton($1); }
+          | asmInstrs asmInstr { $$ = ast_asm_instrs_add($1,$2); }
+          ;
+
+label : identsym ;
+
+asmInstr : labelOpt instr eolsym { $$ = ast_asm_instr($1,$2); } ;
+
+labelOpt : label ":" { $$ = ast_label_opt_label($1); }
+         | empty { $$ = ast_label_opt_empty($1); }
+         ;
+
+empty : %empty { $$ = ast_empty(lexer_filename(), lexer_line()); } ;
+
+instr : threeRegInstr | twoRegInstr | fpcInstr | shiftInstr | oneRegInstr
+      | immedArithInstr | immedBoolInstr | branchTestInstr 
+      | loadStoreInstr | jumpInstr | syscallInstr
+      ;
+
+threeRegInstr : threeRegOp regsym "," regsym "," regsym
+                {
+		    $$ = ast_instr($1, reg_instr_type, 3, $2.number,
+				   $4.number, $6.number,
+				   lexer_token2func($1.code),
+				   ik_none, ast_immed_none());
+		}
+              ;
+
+threeRegOp : "ADD" | "SUB" | "FADD" | "FSUB" | "FMUL" | "FDIV"
+           | "AND" | "BOR" | "NOR" | "XOR"
+           ;
+
+twoRegInstr : twoRegOp regsym "," regsym
+              {
+		  $$ = ast_instr($1, reg_instr_type, 2, $2.number,
+				 $4.number, 0,
+				 lexer_token2func($1.code),
+				 ik_none, ast_immed_none());
+              }
+              ;
+
+twoRegOp : "MUL" | "DIV" ;
+
+shiftInstr : shiftOp regsym "," regsym "," shift
+           {
+	       // say we are using 3 registers,
+	       // because the registers used are rt and rd, not rs
+	       $$ = ast_instr($1, reg_instr_type, 3, 0, $2.number, $4.number, 
+			      lexer_token2func($1.code),
+			      ik_uimmed, ast_immed_unsigned($6.value));
+	   }
+           ;
+
+fpcOp : "CVT" | "RND" ;
+
+fpcInstr : fpcOp regsym "," regsym
+           {
+	       // say we are using 3 registers,
+	       // because the registers used are rt and rd, not rs
+	       $$ = ast_instr($1, reg_instr_type, 3, 0, $2.number, $4.number, 
+			      lexer_token2func($1.code),
+			      ik_none, ast_immed_none());
+	   }
+           ;
+
+shiftOp : "SLL" | "SRL" ;
+
+shift : unsignedintsym ;
+
+oneRegInstr : moveHiLoOp regsym
+              {
+		  // say we are using 3 registers,
+		  // because the register number goes in rd, not rs
+		  $$ = ast_instr($1, reg_instr_type, 3, 0, 0, $2.number,
+				 lexer_token2func($1.code),
+				 ik_none, ast_immed_none());
+	      }
+              | jrOp regsym
+              {
+		  $$ = ast_instr($1, reg_instr_type, 1, $2.number, 0, 0,
+				 lexer_token2func($1.code),
+				 ik_none, ast_immed_none());
+	      }
+              ;
+
+moveHiLoOp : "MFHI" | "MFLO" ;
+
+jrOp : "JR" ;
+
+immedArithInstr : immedArithOp regsym "," regsym "," immed
+                  {
+		      $$ = ast_instr($1, immed_instr_type, 2, $2.number,
+				     $4.number, 0, 0,
+				     ik_immed, ast_immed_number($6.value));
+		  }
+                ;
+
+immedArithOp : "ADDI" ;
+
+immed : signedintsym { assert($1.file_loc->filename != NULL);
+                       $$ = $1;
+                     }
+      | unsignedintsym { $$ = ast_offset_unsigned($1); }
+      ;
+
+immedBoolInstr : immedBoolOp regsym "," regsym "," unsignedintsym
+                 {
+		     $$ = ast_instr($1, immed_instr_type, 2, $2.number,
+				    $4.number, 0, 0,
+				    ik_uimmed, ast_immed_unsigned($6.value));
+		 }
+               ;
+
+immedBoolOp : "ANDI" | "BORI" | "XORI" ;
+
+branchTestInstr : branchTest2Op regsym "," regsym "," offset
+                  {
+		      $$ = ast_instr($1, immed_instr_type, 2, $2.number,
+				     $4.number, 0, 0,
+				     ik_immed, ast_immed_number($6.value));
+		  }
+                | branchTest1Op regsym "," offset
+		  {
+		      $$ = ast_instr($1, immed_instr_type, 1, $2.number, 0, 0,
+				     0, ik_immed, ast_immed_number($4.value));
+		  }
+                  ;
+
+branchTest2Op : "BEQ" | "BNE" | "BFEQ" | "BFNE" ;
+
+branchTest1Op : "BGEZ" | "BGTZ" | "BLEZ" | "BLTZ"
+              | "BFGEZ" | "BFGTZ" | "BFLEZ" | "BFLTZ" ;
+
+offset : signedintsym
+       | unsignedintsym { $$ = ast_offset_unsigned($1); }
+       ;
+
+loadStoreInstr : loadStoreOp regsym "," regsym "," offset
+                 {
+		     $$ = ast_instr($1, immed_instr_type, 2, $2.number,
+				    $4.number, 0, 0,
+				    ik_immed, ast_immed_number($6.value));
+		 }
+               ;
+
+loadStoreOp : "LBU" | "LW" | "FLW" | "SB" | "SW" | "FSW" ;
+
+
+jumpInstr : jumpOp lora
+            {
+		$$ = ast_instr($1, jump_instr_type, 0, 0, 0, 0, 0,
+			       ik_uimmed, ast_immed_lora($2));
+	    }
+            ;
+
+jumpOp : "JMP" | "JAL" ;
+
+syscallInstr : syscallOp
+             {
+		 immedData_t id;
+		 id.id_data_kind = ik_syscall_code;
+		 id.data.syscall_code = lexer_token2syscall_code($1.code);
+		 $$ = ast_instr($1, syscall_instr_type, 0, 0, 0, 0,
+				SYSCALL_F,
+				ik_syscall_code, id);
+	     }
+             ;
+
+syscallOp : "EXIT" | "PSTR" | "PINT" | "PFLT" | "PCH"
+          | "RCH" | "RFLT" | "STRA" | "NOTR" ;
+
+dataSection : ".data" staticStartAddr staticIntDecls staticFloatDecls
+              { $$ = ast_data_section($1, $2.value, $3, $4); }
+            ;
+
+staticStartAddr : unsignedintsym ;
+
+staticIntDecls : empty { $$ = ast_static_int_decls_empty($1); }
+            | staticIntDecls staticIntDecl
+	      { $$ = ast_static_int_decls_add($1,$2); }
+            ;
+
+staticFloatDecls : empty { $$ = ast_static_float_decls_empty($1); }
+            | staticFloatDecls staticFloatDecl
+	      { $$ = ast_static_float_decls_add($1,$2); }
+            ;
+
+staticIntDecl : "INT" identsym intInitializerOpt eolsym
+                { $$ = ast_static_int_decl($2, $3); }
+              ;
+
+staticFloatDecl : "FLOAT" identsym floatInitializerOpt eolsym
+  	          { $$ = ast_static_float_decl($2, $3); }
+                ;
+
+intInitializerOpt : empty { $$ = ast_int_initializer_empty($1); }
+                  | "=" unsignedintsym
+		    { $$ = ast_int_initializer($1, $2.value); }
+                  ;
+
+floatInitializerOpt : empty { $$ = ast_float_initializer_empty($1); }
+                  | "=" floatlitsym
+		    { $$ = ast_float_initializer($1, $2.value); }
+                  ;
+
+stackSection : ".stack" stackBottomAddr
+              { $$ = ast_stack_section($1, $2.value); }
+              ;
+
+stackBottomAddr : unsignedintsym ;
+
+%%
+
+// Set the program's ast to be t
+void setProgAST(program_t t) { progast = t; }

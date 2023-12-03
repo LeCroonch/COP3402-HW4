@@ -1,0 +1,44 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\bibstyle{abbrv}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Overview}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Inputs and Outputs}{1}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}FLOAT language}{1}{section.2}\protected@file@percent }
+\newlabel{sec:FLOAT}{{2}{1}{FLOAT language}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Syntax}{1}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}ASTs}{2}{subsection.2.2}\protected@file@percent }
+\newlabel{sec:asts}{{2.2}{2}{ASTs}{subsection.2.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.2.1}The AST Type}{2}{subsubsection.2.2.1}\protected@file@percent }
+\newlabel{sec:ast-type}{{2.2.1}{2}{The AST Type}{subsubsection.2.2.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.2.2}AST Lists}{2}{subsubsection.2.2.2}\protected@file@percent }
+\newlabel{sec:ast-lists}{{2.2.2}{2}{AST Lists}{subsubsection.2.2.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Lexical grammar of FLOAT. The grammar uses a \texttt  {terminal font} for terminal symbols. Note that an underbar (\texttt  {\_}) and all ASCII letters (a-z and A-Z) are included in the production for \mbox  {$\langle $\textrm  {letter}$\rangle $}. Again, $\textrm  {\textbf  {\large  {\{}}}x\textrm  {\textbf  {\large  {\}}}}$ means an arbitrary number of (i.e., 0 or more) repetitions of $x$. However, \textrm  {`}\texttt  {\{}\textrm  {'} and \textrm  {`}\texttt  {\}}\textrm  {'} are terminal characters (the left and right curly brackets). Some character classes are described in English, these are described in a Roman font between double quotation marks (`` and ''). Note that all characters matched by the nonterminal \mbox  {$\langle $\textrm  {ignored}$\rangle $} are ignored by the lexer.}}{3}{figure.1}\protected@file@percent }
+\newlabel{fig:lexical-grammar}{{1}{3}{Lexical grammar of FLOAT. The grammar uses a \texttt {terminal font} for terminal symbols. Note that an underbar (\texttt {\_}) and all ASCII letters (a-z and A-Z) are included in the production for \nonterm {letter}. Again, $\arbno {x}$ means an arbitrary number of (i.e., 0 or more) repetitions of $x$. However, \gramquote {\texttt {\{}} and \gramquote {\texttt {\}}} are terminal characters (the left and right curly brackets). Some character classes are described in English, these are described in a Roman font between double quotation marks (`` and ''). Note that all characters matched by the nonterminal \nonterm {ignored} are ignored by the lexer}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Context-free grammar for FLOAT. The grammar uses a \texttt  {terminal font} for terminal symbols, and a \textbf  {\texttt  {bold terminal font}} for reserved words. As in EBNF, the notation $\textrm  {\textbf  {\large  {\{}}}x\textrm  {\textbf  {\large  {\}}}}$ means an arbitrary number of (i.e., 0 or more) repetitions of $x$. The terminal symbols \texttt  {\{} and \texttt  {\}} are quoted (like \textrm  {`}\texttt  {\{}\textrm  {'}) to make clear that they are to be interpreted as terminal symbols, not as meta-notations.}}{4}{figure.2}\protected@file@percent }
+\newlabel{fig:cf-grammar}{{2}{4}{Context-free grammar for FLOAT. The grammar uses a \texttt {terminal font} for terminal symbols, and a \KW {bold terminal font} for reserved words. As in EBNF, the notation $\arbno {x}$ means an arbitrary number of (i.e., 0 or more) repetitions of $x$. The terminal symbols \texttt {\{} and \texttt {\}} are quoted (like \gramquote {\texttt {\{}}) to make clear that they are to be interpreted as terminal symbols, not as meta-notations}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Abstract Syntax of FLOAT. Again $\textrm  {\textbf  {\large  {\{}}}x\textrm  {\textbf  {\large  {\}}}}$, means a possibly empty list of $x$.}}{5}{figure.3}\protected@file@percent }
+\newlabel{fig:ast-grammar}{{3}{5}{Abstract Syntax of FLOAT. Again $\arbno {x}$, means a possibly empty list of $x$}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Semantics}{6}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}Variable Declarations}{6}{subsubsection.2.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}Statements}{6}{subsubsection.2.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Assignment Statement}{6}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Sequential Statement}{6}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{If Statement}{6}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Read Statement}{7}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Write Statement}{7}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Expressions}{7}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Future Work}{7}{section.3}\protected@file@percent }
+\gdef \@abspage@last{7}

@@ -1,0 +1,8 @@
+# $Id: vmtest8.flt,v 1.1 2023/11/28 22:12:58 leavens Exp $
+{
+  bool b;
+  b = 3.14 != 3.14;
+  if (b) write 0;
+  write 7;           # writes 7.000000
+  if (!b) write 1;   # writes 1.000000
+}

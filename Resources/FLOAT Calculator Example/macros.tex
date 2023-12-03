@@ -1,0 +1,52 @@
+% $Id: macros.tex,v 1.1 2023/02/20 16:59:39 leavens Exp $
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{textcomp} %required to set upquote flag and for luximono
+%\usepackage[scaled=0.81]{luximono}
+%\usepackage{varioref}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{ragged2e}
+\setlength\RaggedRightParindent{\parindent}
+\RaggedRight
+\lstset{language=C,basicstyle=\ttfamily,commentstyle=\rmfamily\itshape}
+\lstset{morecomment=[l]{//}, %use comment-line-style!
+        morecomment=[s]{/*}{*/}} %for multiline comments
+\lstset{upquote=true} %FH
+%\lstset{mathescape=true}
+\input{boxed-figure-new}
+% getting files for figures
+\newcommand{\LSTFILE}[1]{
+\lstinputlisting[basicstyle=\small\ttfamily]{#1}
+}
+\newcommand{\LSTFILESLICE}[2]{
+\lstinputlisting[basicstyle=\small\ttfamily,linerange={#1}]{#2}
+}
+%
+\newcommand{\LSTCFILE}[1]{
+\lstinputlisting[language=csh,basicstyle=\small\ttfamily]{#1}
+}
+\usepackage[bookmarks=false]{hyperref}
+\input{obey}
+\input{grammar}
+\renewcommand{\nonterm}[1]{\mbox{$\langle$\textrm{#1}$\rangle$}}
+\newcommand{\gramquote}[1]{\textrm{`}#1\textrm{'}}
+\input{use-full-height}
+\input{use-full-width}
+\input{continuedenum}
+%
+% I took out varioref usages, as varioref isn't working
+% \renewcommand{\reftextfacebefore}{on the previous page}
+% \renewcommand{\reftextfaceafter}{on the next page}
+\newcommand{\figref}[1]{Figure~\ref{#1}}  % vref from varioref
+\newcommand{\fignref}[1]{Figure~\ref{#1}}  % doesn't use varioref
+\newcommand{\exref}[1]{Problem~\ref{#1}}  % vref from varioref
+\newcommand{\exnref}[1]{Problem~\ref{#1}}  % doesn't use varioref
+\newcommand{\secref}[1]{Section~\ref{#1}}  % vref from varioref
+\newcommand{\secnref}[1]{Section~\ref{#1}}  % doesn't use varioref
+%
+\newcommand{\floor}[1]{\lfloor#1\rfloor}
+%
+\newcommand{\KW}[1]{\textbf{\texttt{#1}}}
+\renewcommand{\arbno}[1]{\textrm{\textbf{\large{\{}}}#1\textrm{\textbf{\large{\}}}}}

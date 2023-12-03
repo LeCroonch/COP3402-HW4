@@ -1,0 +1,4 @@
+# $Id: declerrtest1.flt,v 1.2 2023/03/30 00:40:11 leavens Exp $
+bool x;
+float x;  # error: x is already declared!
+write x;

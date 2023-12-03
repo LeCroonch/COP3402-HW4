@@ -1,0 +1,3 @@
+ast.c code.c compiler_main.c file_location.c gen_code.c id_attrs.c
+id_use.c instruction.c lexer.c lexer_output.c lexical_address.c
+machine_types.c parser.c reserved.c scope.c scope_check.c symtab.c token.c type_attrs.c unparser.c utilities.c

@@ -1,0 +1,3 @@
+# $Id: vmtest2.flt,v 1.4 2023/11/28 22:12:58 leavens Exp $
+if (2 < 3)
+  write 121;  # writes 121.000000

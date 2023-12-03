@@ -1,0 +1,13 @@
+# $Id: vmtest-nesting5.flt,v 1.1 2023/11/13 00:08:36 leavens Exp $
+float x;
+float y;
+{
+  x = 2;
+  y = 3000;
+  if (x <= y) {
+     write y + 402;
+     if (x < y) {
+        write x + y;
+     }
+  }
+}
