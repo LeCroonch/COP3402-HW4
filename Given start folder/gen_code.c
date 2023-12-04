@@ -20,6 +20,8 @@ extern void gen_code_initialize(){
 
 }
 
+
+
 // Requires: bf if open for writing in binary
 // Generate code for prog into bf
 extern void gen_code_program(BOFFILE bf, block_t prog) { 
@@ -38,7 +40,6 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
 
     header.stack_bottom_addr = header.data_start_address + header.data_length + header.text_length + 4096;
 
-    
     bof_write_header(bf, header);
     
     code *current_code = main_cs;
@@ -46,6 +47,14 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
         instruction_write_bin_instr(bf, current_code->instr);
         current_code = current_code->next;
     }
+
+    literal_table_start_iteration();
+    while(literal_table_iteration_has_next())
+    {
+        word_type w = literal_table_iteration_next();
+        bof_write_word(bf, w);
+    }
+    literal_table_end_iteration();
     bof_close(bf);
 }
 // Requires: bf if open for writing in binary
@@ -492,9 +501,9 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
     }
     ret = code_seq_concat(ret, do_op);
     // rest of the code for the comparisons
-    ret = code_seq_add_to_end(ret, code_add(0, 0, AT)); // put false in AT
+    ret = code_seq_add_to_end(ret, code_addi(AT, 0, 0)); // put false in AT
     ret = code_seq_add_to_end(ret, code_beq(0, 0, 1)); // skip next instr
-    ret = code_seq_add_to_end(ret, code_addi(0, AT, 1)); // put true in AT
+    ret = code_seq_add_to_end(ret, code_addi(AT, 0, 1)); // put true in AT
     ret = code_seq_concat(ret, code_push_reg_on_stack(AT));
     return ret;
 }
