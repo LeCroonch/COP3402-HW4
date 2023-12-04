@@ -152,7 +152,7 @@ extern code_seq gen_code_var_decl(var_decl_t vd){ //Should be good
 code_seq gen_code_idents(idents_t idents)
 {
     code_seq ret = code_seq_empty();
-    
+
     ident_t *idpointer = idents.idents;
     while (idpointer != NULL)
     {
@@ -263,19 +263,9 @@ code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
 // END EXTRA CREDIT
 
 // Generate code for stmt
-extern code_seq gen_code_begin_stmt(begin_stmt_t stmt) { //Should be good (double check)
+extern code_seq gen_code_begin_stmt(begin_stmt_t stmt) {
 
-    code_seq ret;
-    // allocate space and initialize any variables in block
-    ret = gen_code_stmts(stmt.stmts);
-    int vars_len_in_bytes = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
-    // in FLOAT, surrounding scope's base is FP, so that is the static link
-    ret = code_seq_add_to_end(ret, code_add(0, FP, A0));
-    ret = code_seq_concat(ret, code_save_registers_for_AR());
-    ret = code_seq_concat(ret, gen_code_stmts(stmt.stmts));
-    ret = code_seq_concat(ret, code_restore_registers_from_AR());
-    ret = code_seq_concat(ret, code_deallocate_stack_space(vars_len_in_bytes));
-    return ret;
+    return gen_code_stmts(stmt.stmts);
 
 }
 
