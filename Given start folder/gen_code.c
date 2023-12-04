@@ -61,15 +61,18 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
 }
 // Requires: bf if open for writing in binary
 // Generate code for the given AST
-code_seq gen_code_block(block_t blk) {//================NEEDS REWORDING=======
+code_seq gen_code_block(block_t blk) {
+
     code_seq ret = code_seq_empty();
+    
+    int varslen = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
+
     ret = code_seq_concat(ret, gen_code_var_decls(blk.var_decls));
-    int vars_len_in_bytes = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
     ret = code_seq_concat(ret, gen_code_const_decls(blk.const_decls));
     ret = code_seq_concat(ret, code_save_registers_for_AR());
     ret = code_seq_concat(ret, gen_code_stmt(blk.stmt));
     ret = code_seq_concat(ret, code_restore_registers_from_AR());
-    ret = code_seq_concat(ret, code_deallocate_stack_space(vars_len_in_bytes));
+    ret = code_seq_concat(ret, code_deallocate_stack_space(varslen));
     ret = code_seq_add_to_end(ret, code_exit());
     return ret;
 }
@@ -222,15 +225,18 @@ extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
 }
 
 // Generate code for stmt
-code_seq gen_code_assign_stmt(assign_stmt_t stmt) {//================NEEDS REWORDING=======
+code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
+
     code_seq ret = gen_code_expr(*(stmt.expr));
+    unsigned int offset = id_use_get_attrs(stmt.idu)->offset_count;
+
     assert(stmt.idu != NULL);
     assert(id_use_get_attrs(stmt.idu) != NULL);
+    assert(offset <= USHRT_MAX);
+
     ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
     ret = code_seq_concat(ret, code_compute_fp(T9, stmt.idu->levelsOutward));
-    unsigned int offset_count = id_use_get_attrs(stmt.idu)->offset_count;
-    assert(offset_count <= USHRT_MAX);
-    ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
+    ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset));
     return ret;
 }
 
@@ -281,31 +287,36 @@ extern code_seq gen_code_stmts(stmts_t stmts) { //Should be good
 }
 
 // Generate code for the if-statement given by stmt
-code_seq gen_code_if_stmt(if_stmt_t stmt) {//================NEEDS REWORDING=======
-    code_seq thenCode = gen_code_stmt(*(stmt.then_stmt));
-    code_seq elseCode = gen_code_stmt(*(stmt.else_stmt));
-    int thenCode_size = code_seq_size(thenCode);
-    int elseCode_size = code_seq_size(elseCode);
+code_seq gen_code_if_stmt(if_stmt_t stmt) {
 
     code_seq ret = gen_code_condition(stmt.condition);
+
+    code_seq thenstmt = gen_code_stmt(*(stmt.then_stmt));
+    int thenlen = code_seq_size(thenstmt);
+
+    code_seq elsestmt = gen_code_stmt(*(stmt.else_stmt));
+    int elselen = code_seq_size(elsestmt);
+    
     ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, thenCode_size + 1));
-    ret = code_seq_concat(ret, thenCode);
-    ret = code_seq_add_to_end(ret, code_beq(0, 0, elseCode_size));
-    ret = code_seq_concat(ret, elseCode);
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, thenlen + 1));
+    ret = code_seq_concat(ret, thenstmt);
+    ret = code_seq_add_to_end(ret, code_beq(0, 0, elselen));
+    ret = code_seq_concat(ret, elsestmt);
 
     return ret;
 }
 
 // Generate code for the if-statment given by stmt
-code_seq gen_code_while_stmt(while_stmt_t stmt) { //================NEEDS REWORDING=======
-    code_seq bodyCode = gen_code_stmt(*(stmt.body));
-    int bodySize = code_seq_size(bodyCode);
-
+code_seq gen_code_while_stmt(while_stmt_t stmt) { 
+    
     code_seq ret = gen_code_condition(stmt.condition);
+    code_seq bodystmt = gen_code_stmt(*(stmt.body));
+
+    int bodylen = code_seq_size(bodystmt);
+
     ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, bodySize + 1));
-    ret = code_seq_concat(ret, bodyCode);
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, bodylen + 1));
+    ret = code_seq_concat(ret, bodystmt);
     ret = code_seq_add_to_end(ret, code_beq(0, 0, -code_seq_size(ret)));
     return ret;
 }
