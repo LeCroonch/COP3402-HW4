@@ -20,34 +20,35 @@ extern void gen_code_initialize(){
 
 }
 
-
+static void gen_code_output_seq(BOFFILE bf, code_seq cs) {
+    while (!code_seq_is_empty(cs)) {
+        bin_instr_t inst = code_seq_first(cs)->instr;
+        instruction_write_bin_instr(bf, inst);
+        cs = code_seq_rest(cs);
+    }
+}
+static BOFHeader gen_code_program_header(code_seq main_cs) {
+    BOFHeader ret;
+    strncpy(ret.magic, "BOF", MAGIC_BUFFER_SIZE);
+    ret.text_start_address = 0;
+    ret.text_length = code_seq_size(main_cs) * BYTES_PER_WORD;
+    ret.data_start_address = MAX(ret.text_length, 1024) + BYTES_PER_WORD;
+    ret.data_length = literal_table_size() * BYTES_PER_WORD;
+    ret.stack_bottom_addr = ret.data_start_address + ret.data_length + ret.text_length + 4096;
+    return ret;
+}
 
 // Requires: bf if open for writing in binary
 // Generate code for prog into bf
 extern void gen_code_program(BOFFILE bf, block_t prog) { 
-    gen_code_initialize();
     
     code_seq main_cs = gen_code_block(prog);
     
-    int text_length_bytes = code_seq_size(main_cs) * BYTES_PER_WORD;
+    BOFHeader header = gen_code_program_header(main_cs);
     
-    BOFHeader header;
-    strncpy(header.magic, "BOF", MAGIC_BUFFER_SIZE);
-    header.text_start_address = 0;
-    header.text_length = text_length_bytes;
-    header.data_start_address = MAX(header.text_length, 1024) + BYTES_PER_WORD;
-    header.data_length = 0;
-
-    header.stack_bottom_addr = header.data_start_address + header.data_length + header.text_length + 4096;
-
     bof_write_header(bf, header);
     
-    code *current_code = main_cs;
-    while (current_code != NULL) {
-        instruction_write_bin_instr(bf, current_code->instr);
-        current_code = current_code->next;
-    }
-
+    gen_code_output_seq(bf, main_cs);
     literal_table_start_iteration();
     while(literal_table_iteration_has_next())
     {
@@ -55,27 +56,22 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
         bof_write_word(bf, w);
     }
     literal_table_end_iteration();
+
     bof_close(bf);
 }
 // Requires: bf if open for writing in binary
 // Generate code for the given AST
-extern code_seq gen_code_block(block_t blk) {
-    code_seq block = code_seq_empty();
-
-    code_seq var_block = gen_code_var_decls(blk.var_decls);
-    int vars_len_in_bytes = (code_seq_size(var_block) / 2) * BYTES_PER_WORD;
-
-    code_seq const_block = gen_code_const_decls(blk.const_decls);
-    int const_len_in_bytes = (code_seq_size(const_block) / 2) * BYTES_PER_WORD;
-
-    block = code_seq_concat(block, code_save_registers_for_AR());
-    block = code_seq_concat(block, var_block);
-    block = code_seq_concat(block, const_block);
-    block = code_seq_concat(block, code_restore_registers_from_AR());
-    block = code_seq_concat(block, code_deallocate_stack_space(vars_len_in_bytes + const_len_in_bytes));
-    block = code_seq_add_to_end(block, code_exit());
-
-    return block;
+code_seq gen_code_block(block_t blk) {
+    code_seq ret = code_seq_empty();
+    ret = code_seq_concat(ret, gen_code_var_decls(blk.var_decls));
+    int vars_len_in_bytes = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
+    ret = code_seq_concat(ret, gen_code_const_decls(blk.const_decls));
+    ret = code_seq_concat(ret, code_save_registers_for_AR());
+    ret = code_seq_concat(ret, gen_code_stmt(blk.stmt));
+    ret = code_seq_concat(ret, code_restore_registers_from_AR());
+    ret = code_seq_concat(ret, code_deallocate_stack_space(vars_len_in_bytes));
+    ret = code_seq_add_to_end(ret, code_exit());
+    return ret;
 }
 
 // Generate code for the const-decls, cds
@@ -116,10 +112,9 @@ extern code_seq gen_code_const_defs(const_defs_t cdfs) { //Should be good
 }
 
 // Generate code for the const-def, cdf
-extern code_seq gen_code_const_def(const_def_t cdf) { //Should be good (double check)
-
-    return gen_code_ident(cdf.ident); 
-
+code_seq gen_code_const_def(const_def_t cdf) {
+    unsigned int global_offset = literal_table_lookup(cdf.number.text, cdf.number.value);
+    return code_seq_concat(code_seq_singleton(code_lw(GP, V0, global_offset)), code_push_reg_on_stack(V0));
 }
 
 // Generate code for the var_decls_t vds to out
@@ -151,37 +146,17 @@ extern code_seq gen_code_var_decl(var_decl_t vd){ //Should be good
 // in reverse order (so the first declared are allocated last).
 // There are 2 instructions generated for each identifier declared
 // (one to allocate space and another to initialize that space)
-extern code_seq gen_code_idents(idents_t idents) {//maybe fixed??
+code_seq gen_code_idents(idents_t idents) {
     code_seq ret = code_seq_empty();
     ident_t *idp = idents.idents;
-
     while (idp != NULL) {
-        id_attrs *attrs = id_use_get_attrs(idp->idu);
-        
         code_seq alloc_and_init = code_seq_singleton(code_addi(SP, SP, -BYTES_PER_WORD));
-        
-        // Based on the kind of identifier, generate the appropriate store instruction
-        switch (attrs->kind) {
-            case variable_idk: // Assuming all variables are integers
-                alloc_and_init = code_seq_add_to_end(alloc_and_init, code_sw(SP, 0, 0));
-                break;
-            case constant_idk: // Assuming all constants are integers
-                alloc_and_init = code_seq_add_to_end(alloc_and_init, code_sw(SP, 0, 0));
-                break;
-            case procedure_idk:
-                break;
-            default:
-                bail_with_error("Unknown id_kind (%d) in gen_code_idents!", attrs->kind);
-                break;
-        }
-        
-        // Generate these in reverse order, so addressing works properly
+        alloc_and_init = code_seq_add_to_end(alloc_and_init, code_sw(SP, 0, 0));
         ret = code_seq_concat(alloc_and_init, ret);
         idp = idp->next;
     }
     return ret;
 }
-
 
 // EXTRA CREDIT
 
@@ -385,15 +360,10 @@ extern code_seq gen_code_read_stmt(read_stmt_t stmt) {
 
 // Generate code for the write statment given by stmt.
 extern code_seq gen_code_write_stmt(write_stmt_t stmt) {
-    // Generate code to evaluate the expression and put the result on the stack
     code_seq ret = gen_code_expr(stmt.expr);
     
-    // Pop the result from the stack into the $a0 register, which is the argument for print syscall
     ret = code_seq_concat(ret, code_pop_stack_into_reg(A0));
-    
-    // Call the appropriate print syscall based on the type of the expression
-    // Assuming the expression results in an integer, use code_pint() to print it
-    // If the expression is a character, you would use code_pch() instead
+
     ret = code_seq_add_to_end(ret, code_pint());
     
     return ret;
@@ -513,7 +483,7 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
 // putting the result on top of the stack,
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
-extern code_seq gen_code_expr(expr_t exp) { //Should be good
+extern code_seq gen_code_expr(expr_t exp) { //Should be checked
 
     switch (exp.expr_kind) { 
     case expr_bin:
@@ -606,7 +576,7 @@ extern code_seq gen_code_ident(ident_t id) {
 
 
 // Generate code to put the given number on top of the stack
-extern code_seq gen_code_number(number_t num) { //Looks fine (double check)
+extern code_seq gen_code_number(number_t num) { //double check function
 
     unsigned int global_offset = literal_table_lookup(num.text, num.value);
     return code_seq_concat(code_seq_singleton(code_lw(GP, V0, global_offset)), code_push_reg_on_stack(V0));
