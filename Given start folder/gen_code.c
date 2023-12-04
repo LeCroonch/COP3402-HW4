@@ -149,15 +149,21 @@ extern code_seq gen_code_var_decl(var_decl_t vd){ //Should be good
 // in reverse order (so the first declared are allocated last).
 // There are 2 instructions generated for each identifier declared
 // (one to allocate space and another to initialize that space)
-code_seq gen_code_idents(idents_t idents) {
+code_seq gen_code_idents(idents_t idents)
+{
     code_seq ret = code_seq_empty();
-    ident_t *idp = idents.idents;
-    while (idp != NULL) {
+    
+    ident_t *idpointer = idents.idents;
+    while (idpointer != NULL)
+    {
         code_seq alloc_and_init = code_seq_singleton(code_addi(SP, SP, -BYTES_PER_WORD));
+
         alloc_and_init = code_seq_add_to_end(alloc_and_init, code_sw(SP, 0, 0));
+
         ret = code_seq_concat(alloc_and_init, ret);
-        idp = idp->next;
+        idpointer = idpointer->next;
     }
+
     return ret;
 }
 
