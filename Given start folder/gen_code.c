@@ -61,7 +61,7 @@ extern void gen_code_program(BOFFILE bf, block_t prog) {
 }
 // Requires: bf if open for writing in binary
 // Generate code for the given AST
-code_seq gen_code_block(block_t blk) {
+code_seq gen_code_block(block_t blk) {//================NEEDS REWORDING=======
     code_seq ret = code_seq_empty();
     ret = code_seq_concat(ret, gen_code_var_decls(blk.var_decls));
     int vars_len_in_bytes = (code_seq_size(ret) / 2) * BYTES_PER_WORD;
@@ -222,7 +222,7 @@ extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
 }
 
 // Generate code for stmt
-code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
+code_seq gen_code_assign_stmt(assign_stmt_t stmt) {//================NEEDS REWORDING=======
     code_seq ret = gen_code_expr(*(stmt.expr));
     assert(stmt.idu != NULL);
     assert(id_use_get_attrs(stmt.idu) != NULL);
@@ -281,7 +281,7 @@ extern code_seq gen_code_stmts(stmts_t stmts) { //Should be good
 }
 
 // Generate code for the if-statement given by stmt
-code_seq gen_code_if_stmt(if_stmt_t stmt) {
+code_seq gen_code_if_stmt(if_stmt_t stmt) {//================NEEDS REWORDING=======
     code_seq thenCode = gen_code_stmt(*(stmt.then_stmt));
     code_seq elseCode = gen_code_stmt(*(stmt.else_stmt));
     int thenCode_size = code_seq_size(thenCode);
@@ -298,7 +298,7 @@ code_seq gen_code_if_stmt(if_stmt_t stmt) {
 }
 
 // Generate code for the if-statment given by stmt
-code_seq gen_code_while_stmt(while_stmt_t stmt) {
+code_seq gen_code_while_stmt(while_stmt_t stmt) { //================NEEDS REWORDING=======
     code_seq bodyCode = gen_code_stmt(*(stmt.body));
     int bodySize = code_seq_size(bodyCode);
 
