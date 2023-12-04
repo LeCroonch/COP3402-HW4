@@ -222,37 +222,15 @@ extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
 }
 
 // Generate code for stmt
-extern code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
-    // put value of expression in $v0
+code_seq gen_code_assign_stmt(assign_stmt_t stmt) {
     code_seq ret = gen_code_expr(*(stmt.expr));
     assert(stmt.idu != NULL);
     assert(id_use_get_attrs(stmt.idu) != NULL);
-
-    // Infer the type based on the kind of identifier
-    id_kind kind = id_use_get_attrs(stmt.idu)->kind;
     ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
-
-    // put frame pointer from the lexical address of the name (using stmt.idu) into $t9
     ret = code_seq_concat(ret, code_compute_fp(T9, stmt.idu->levelsOutward));
     unsigned int offset_count = id_use_get_attrs(stmt.idu)->offset_count;
-    assert(offset_count <= USHRT_MAX); // it has to fit!
-
-    // Based on the kind of identifier, generate the appropriate store instruction
-    switch (kind) {
-        case variable_idk: // Assuming all variables are integers
-            ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
-            break;
-        case constant_idk: // Assuming all constants are integers
-            ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
-            break;
-        case procedure_idk:
-            // Procedures do not typically take up space on the stack in this context
-            // You might want to handle procedures differently or ignore them here
-            break;
-        default:
-            bail_with_error("Unknown id_kind (%d) for ident in assignment stmt!", kind);
-            break;
-    }
+    assert(offset_count <= USHRT_MAX);
+    ret = code_seq_add_to_end(ret, code_sw(T9, V0, offset_count));
     return ret;
 }
 
@@ -302,40 +280,33 @@ extern code_seq gen_code_stmts(stmts_t stmts) { //Should be good
 
 }
 
-// Generate code for the if-statment given by stmt
-extern code_seq gen_code_if_stmt(if_stmt_t stmt) { //Corrected
+// Generate code for the if-statement given by stmt
+code_seq gen_code_if_stmt(if_stmt_t stmt) {
+    code_seq thenCode = gen_code_stmt(*(stmt.then_stmt));
+    code_seq elseCode = gen_code_stmt(*(stmt.else_stmt));
+    int thenCode_size = code_seq_size(thenCode);
+    int elseCode_size = code_seq_size(elseCode);
 
     code_seq ret = gen_code_condition(stmt.condition);
-    code_seq then_seq = gen_code_stmt(*(stmt.then_stmt));
-    code_seq else_seq = gen_code_stmt(*(stmt.else_stmt));
-
-    int then_len = code_seq_size(then_seq);
-    int else_len = code_seq_size(else_seq);
-
-    // Branch to else part if condition is false
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, then_len + 1)); // +1 for the jump over the else part
-    ret = code_seq_concat(ret, then_seq);
-    // Jump over the else part if then part is executed
-    ret = code_seq_add_to_end(ret, code_jmp(else_len));
-    ret = code_seq_concat(ret, else_seq);
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, thenCode_size + 1));
+    ret = code_seq_concat(ret, thenCode);
+    ret = code_seq_add_to_end(ret, code_beq(0, 0, elseCode_size));
+    ret = code_seq_concat(ret, elseCode);
 
     return ret;
 }
 
 // Generate code for the if-statment given by stmt
-extern code_seq gen_code_while_stmt(while_stmt_t stmt) { //Corrected
+code_seq gen_code_while_stmt(while_stmt_t stmt) {
+    code_seq bodyCode = gen_code_stmt(*(stmt.body));
+    int bodySize = code_seq_size(bodyCode);
 
     code_seq ret = gen_code_condition(stmt.condition);
-    code_seq body_seq = gen_code_stmt(*(stmt.body));
-
-    int body_len = code_seq_size(body_seq);
-
-    // Branch to the end if condition is false
-    ret = code_seq_add_to_end(ret, code_beq(V0, 0, body_len + 1)); // +1 to jump over the loop back
-    ret = code_seq_concat(ret, body_seq);
-    // Loop back to the condition check
-    ret = code_seq_add_to_end(ret, code_jmp(-(body_len + 1 + code_seq_size(ret))));
-
+    ret = code_seq_concat(ret, code_pop_stack_into_reg(V0));
+    ret = code_seq_add_to_end(ret, code_beq(V0, 0, bodySize + 1));
+    ret = code_seq_concat(ret, bodyCode);
+    ret = code_seq_add_to_end(ret, code_beq(0, 0, -code_seq_size(ret)));
     return ret;
 }
 
