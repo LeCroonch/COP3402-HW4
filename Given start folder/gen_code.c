@@ -80,7 +80,7 @@ code_seq gen_code_block(block_t blk) {
 // Generate code for the const-decls, cds
 // There are 3 instructions generated for each identifier declared
 // (one to allocate space and two to initialize that space)
-extern code_seq gen_code_const_decls(const_decls_t cds) { //Should be good
+extern code_seq gen_code_const_decls(const_decls_t cds) {
 
     code_seq ret = code_seq_empty();
     const_decl_t *cdp = cds.const_decls;
@@ -94,14 +94,14 @@ extern code_seq gen_code_const_decls(const_decls_t cds) { //Should be good
 }
 
 // Generate code for the const-decl, cd
-extern code_seq gen_code_const_decl(const_decl_t cd) { //Should be good
+extern code_seq gen_code_const_decl(const_decl_t cd) {
 
     return gen_code_const_defs(cd.const_defs);
 
 }
 
 // Generate code for the const-defs, cdfs
-extern code_seq gen_code_const_defs(const_defs_t cdfs) { //Should be good
+extern code_seq gen_code_const_defs(const_defs_t cdfs) {
 
     code_seq ret = code_seq_empty();
     const_def_t *cdfp = cdfs.const_defs;
@@ -194,7 +194,7 @@ extern void gen_code_proc_decl(proc_decl_t pd) {
 // END EXTRA CREDIT
 
 // Generate code for stmt
-extern code_seq gen_code_stmt(stmt_t stmt){ //Should be good
+extern code_seq gen_code_stmt(stmt_t stmt){
 
     switch (stmt.stmt_kind) {
     case assign_stmt:
@@ -270,7 +270,7 @@ extern code_seq gen_code_begin_stmt(begin_stmt_t stmt) {
 }
 
 // Generate code for the list of statments given by stmts
-extern code_seq gen_code_stmts(stmts_t stmts) { //Should be good
+extern code_seq gen_code_stmts(stmts_t stmts) {
 
     code_seq ret = code_seq_empty();
     stmt_t *sp = stmts.stmts;
@@ -396,14 +396,12 @@ extern code_seq gen_code_odd_condition(odd_condition_t cond){
 // on top of the runtime stack
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
-extern code_seq gen_code_rel_op_condition(rel_op_condition_t cond){
-
-    code_seq ret = gen_code_rel_op(cond.rel_op);
-    ret = code_seq_concat(ret, code_pop_stack_into_reg(AT));
-
+code_seq gen_code_rel_op_condition(rel_op_condition_t cond) {
+    code_seq ret = code_seq_empty();
+    ret = code_seq_concat(ret, gen_code_expr(cond.expr1));
+    ret = code_seq_concat(ret, gen_code_expr(cond.expr2));
+    ret = code_seq_concat(ret, gen_code_rel_op(cond.rel_op));
     return ret;
-
-
 }
 
 // Generate code for the rel_op
@@ -461,7 +459,7 @@ extern code_seq gen_code_rel_op(token_t rel_op) {
 // putting the result on top of the stack,
 // and using V0 and AT as temporary registers
 // May also modify SP, HI,LO when executed
-extern code_seq gen_code_expr(expr_t exp) { //Should be checked
+extern code_seq gen_code_expr(expr_t exp) {
 
     switch (exp.expr_kind) { 
     case expr_bin:
@@ -513,21 +511,22 @@ extern code_seq gen_code_arith_op(token_t arith_op) {
     code_seq do_op = code_seq_empty();
     switch (arith_op.code) {  
     case plussym:
-	do_op = code_seq_add_to_end(do_op, code_add(V0, AT, V0));
-	break;
-    case minussym:
-	do_op = code_seq_add_to_end(do_op, code_sub(V0, AT, V0));
-	break;
-    case multsym:
-	do_op = code_seq_add_to_end(do_op, code_mul(V0, AT));
-	break;
-    case divsym: 
-	do_op = code_seq_add_to_end(do_op, code_div(V0, AT));
-	break;
-    default:
-	bail_with_error("Unexpected arithOp (%d) in gen_code_arith_op",
-			arith_op.code);
-	break;
+    do_op = code_seq_add_to_end(do_op, code_add(V0, AT, V0));
+    break;
+case minussym:
+    do_op = code_seq_add_to_end(do_op, code_sub(V0, AT, V0));
+    break;
+case multsym:
+    do_op = code_seq_add_to_end(do_op, code_mul(V0, AT));
+    do_op = code_seq_add_to_end(do_op, code_mflo(V0));
+    break;
+case divsym:
+    do_op = code_seq_add_to_end(do_op, code_div(V0, AT));
+    do_op = code_seq_add_to_end(do_op, code_mflo(V0));
+    break;
+default:
+    bail_with_error("Unexpected arithOp (%d) in gen_code_arith_op", arith_op.code);
+    break;
     }
     do_op = code_seq_concat(do_op, code_push_reg_on_stack(V0));
     return code_seq_concat(ret, do_op);
@@ -554,7 +553,7 @@ extern code_seq gen_code_ident(ident_t id) {
 
 
 // Generate code to put the given number on top of the stack
-extern code_seq gen_code_number(number_t num) { //double check function
+extern code_seq gen_code_number(number_t num) {
 
     unsigned int global_offset = literal_table_lookup(num.text, num.value);
     return code_seq_concat(code_seq_singleton(code_lw(GP, V0, global_offset)), code_push_reg_on_stack(V0));
